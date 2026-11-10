@@ -6,10 +6,18 @@ import '../stays/stays_controller.dart';
 import 'auth_controller.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, required this.auth, required this.stays});
+  const LoginScreen({
+    super.key,
+    required this.auth,
+    required this.stays,
+    this.initialRegister = false,
+  });
 
   final AuthController auth;
   final StaysController stays;
+
+  /// Open in "create account" mode instead of sign-in.
+  final bool initialRegister;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -21,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
 
-  bool _isRegister = false;
+  late bool _isRegister = widget.initialRegister;
   bool _obscure = true;
 
   @override
@@ -59,6 +67,12 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = widget.auth;
 
     return Scaffold(
+      appBar: Navigator.canPop(context)
+          ? AppBar(
+              backgroundColor: Colors.transparent,
+              leading: const BackButton(),
+            )
+          : null,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -169,7 +183,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     color: Colors.white,
                                   ),
                                 )
-                              : Text(_isRegister ? 'Create account' : 'Sign in'),
+                              : Text(
+                                  _isRegister ? 'Create account' : 'Sign in'),
                         ),
                       ],
                     ),
@@ -216,4 +231,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

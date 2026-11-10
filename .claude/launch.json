@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "bleiben-web",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "5180", "--bind", "127.0.0.1", "--directory", "frontend/build/web"],
+      "port": 5180,
+      "url": "http://127.0.0.1:5180"
+    }
+  ]
+}
