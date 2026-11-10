@@ -160,13 +160,13 @@ class _StaysScreenState extends State<StaysScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.hotel_outlined, size: 64, color: AppTheme.moss.withOpacity(0.4)),
+            Icon(Icons.hotel_outlined, size: 64, color: AppTheme.moss.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
             Text(
               'No stays yet',
               style: GoogleFonts.fraunces(
                 fontSize: 22,
-                color: AppTheme.ink.withOpacity(0.5),
+                color: AppTheme.ink.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: 8),
@@ -231,7 +231,7 @@ class _StayCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppTheme.forest.withOpacity(0.1),
+                  color: AppTheme.forest.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.hotel_outlined, color: AppTheme.forest),
@@ -269,10 +269,12 @@ class _StayCard extends StatelessWidget {
                           const Icon(Icons.calendar_today_outlined,
                               size: 13, color: Colors.grey),
                           const SizedBox(width: 4),
-                          Text(
-                            '${_fmtDate(stay.checkIn)} → ${_fmtDate(stay.checkOut)}',
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.grey),
+                          Flexible(
+                            child: Text(
+                              '${_fmtDate(stay.checkIn)} → ${_fmtDate(stay.checkOut)}',
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.grey),
+                            ),
                           ),
                         ],
                       ),
@@ -285,7 +287,7 @@ class _StayCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                             fontSize: 13,
-                            color: AppTheme.ink.withOpacity(0.6)),
+                            color: AppTheme.ink.withValues(alpha: 0.6)),
                       ),
                     ],
                   ],

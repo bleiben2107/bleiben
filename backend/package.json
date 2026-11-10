@@ -8,14 +8,17 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node --test tests/api.test.js"
+    "test": "node --test tests/api.test.js",
+    "db:test": "node scripts/test-mongo.js"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^18.0.10",
     "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^7.8.0"
   }
 }

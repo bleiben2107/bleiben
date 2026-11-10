@@ -18,40 +18,60 @@ function stayPayload(body, { partial = false } = {}) {
 export function staysRouter(db) {
   const router = Router();
 
-  router.get("/", (req, res) => {
-    res.json(db.listStays(req.user.id));
+  router.get("/", async (req, res, next) => {
+    try {
+      return res.json(await db.listStays(req.user.id));
+    } catch (err) {
+      return next(err);
+    }
   });
 
-  router.post("/", (req, res) => {
-    const payload = stayPayload(req.body);
-    if (payload.error) {
-      return res.status(400).json({ detail: payload.error });
+  router.post("/", async (req, res, next) => {
+    try {
+      const payload = stayPayload(req.body);
+      if (payload.error) {
+        return res.status(400).json({ detail: payload.error });
+      }
+      return res.status(201).json(await db.createStay(req.user.id, payload));
+    } catch (err) {
+      return next(err);
     }
-    return res.status(201).json(db.createStay(req.user.id, payload));
   });
 
-  router.get("/:id", (req, res) => {
-    const stay = db.findStay(Number(req.params.id), req.user.id);
-    if (!stay) {
-      return res.status(404).json({ detail: "Stay not found" });
+  router.get("/:id", async (req, res, next) => {
+    try {
+      const stay = await db.findStay(Number(req.params.id), req.user.id);
+      if (!stay) {
+        return res.status(404).json({ detail: "Stay not found" });
+      }
+      return res.json(stay);
+    } catch (err) {
+      return next(err);
     }
-    return res.json(stay);
   });
 
-  router.patch("/:id", (req, res) => {
-    const stay = db.findStay(Number(req.params.id), req.user.id);
-    if (!stay) {
-      return res.status(404).json({ detail: "Stay not found" });
+  router.patch("/:id", async (req, res, next) => {
+    try {
+      const stay = await db.findStay(Number(req.params.id), req.user.id);
+      if (!stay) {
+        return res.status(404).json({ detail: "Stay not found" });
+      }
+      return res.json(await db.updateStay(stay, stayPayload(req.body, { partial: true })));
+    } catch (err) {
+      return next(err);
     }
-    return res.json(db.updateStay(stay, stayPayload(req.body, { partial: true })));
   });
 
-  router.delete("/:id", (req, res) => {
-    const deleted = db.deleteStay(Number(req.params.id), req.user.id);
-    if (!deleted) {
-      return res.status(404).json({ detail: "Stay not found" });
+  router.delete("/:id", async (req, res, next) => {
+    try {
+      const deleted = await db.deleteStay(Number(req.params.id), req.user.id);
+      if (!deleted) {
+        return res.status(404).json({ detail: "Stay not found" });
+      }
+      return res.status(204).end();
+    } catch (err) {
+      return next(err);
     }
-    return res.status(204).end();
   });
 
   return router;

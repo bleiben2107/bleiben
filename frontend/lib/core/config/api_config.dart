@@ -2,14 +2,14 @@ import 'package:flutter/foundation.dart';
 
 class ApiConfig {
   /// Override this if the API is hosted elsewhere.
-  static const String? overrideBaseUrl = String.fromEnvironment(
+  static const String overrideBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',
   );
 
   static String get baseUrl {
-    if (overrideBaseUrl != null && overrideBaseUrl!.isNotEmpty) {
-      return overrideBaseUrl!;
+    if (overrideBaseUrl.isNotEmpty) {
+      return overrideBaseUrl;
     }
     if (kIsWeb) {
       return 'http://localhost:8000';

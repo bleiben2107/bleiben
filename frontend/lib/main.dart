@@ -15,7 +15,9 @@ Future<void> main() async {
   final stays = StaysController(api: api);
   if (session.isSignedIn) {
     await auth.loadProfile();
-    await stays.refresh();
+    if (auth.isSignedIn) {
+      await stays.refresh();
+    }
   }
   runApp(BleibenApp(auth: auth, stays: stays));
 }

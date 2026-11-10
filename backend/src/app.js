@@ -12,8 +12,13 @@ export function createApp(db) {
   app.use(cors({ origin: corsOriginList() }));
   app.use(express.json());
 
-  app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", app: config.appName });
+  app.get("/api/health", async (_req, res, next) => {
+    try {
+      await db.ping?.();
+      return res.json({ status: "ok", app: config.appName, db: db.kind || "json" });
+    } catch (err) {
+      return next(err);
+    }
   });
 
   app.use("/api/auth", authRouter(db));

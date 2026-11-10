@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     _isRegister ? 'Create your account' : 'Welcome back',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppTheme.ink.withOpacity(0.6),
+                          color: AppTheme.ink.withValues(alpha: 0.6),
                         ),
                     textAlign: TextAlign.center,
                   ),
@@ -178,8 +178,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 20),
 
                   // ── Toggle register / login ───────────────────────────
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
                         _isRegister
@@ -192,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           setState(() {
                             _isRegister = !_isRegister;
                             _formKey.currentState?.reset();
-                            widget.auth.error == null;
+                            widget.auth.error = null;
                           });
                         },
                         child: Text(
