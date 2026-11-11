@@ -76,6 +76,30 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _openAccount() async {
+    final action = await showAccountSheet(context);
+    if (action == null || !mounted) return;
+    switch (action) {
+      case AccountAction.signIn:
+        widget.onLogin();
+      case AccountAction.listProperty:
+        widget.onSignUp();
+      case AccountAction.contact:
+        _bookDemo();
+      case AccountAction.help:
+        _notice('The help centre is coming soon.');
+      case AccountAction.about:
+        _notice('About us is coming soon.');
+      case AccountAction.bookStay:
+        _notice('Booking a stay is coming soon.');
+      // Signed-in only; the homepage is shown to signed-out visitors.
+      case AccountAction.trips ||
+            AccountAction.accountSettings ||
+            AccountAction.logout:
+        break;
+    }
+  }
+
   void _handleLink(HomeLink link) {
     switch (link) {
       case AnchorLink(:final anchor):
@@ -101,8 +125,8 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.white,
       endDrawer: HomeMobileMenu(
         onLink: _handleLink,
-        onLogin: widget.onLogin,
         onSignUp: widget.onSignUp,
+        onAccount: _openAccount,
       ),
       floatingActionButton: FloatingActions(
         showBackToTop: _showBackToTop,
@@ -125,6 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onLink: _handleLink,
               onLogin: widget.onLogin,
               onSignUp: widget.onSignUp,
+              onAccount: _openAccount,
               onMenu: () => _scaffoldKey.currentState?.openEndDrawer(),
               onLogo: _toTop,
             ),

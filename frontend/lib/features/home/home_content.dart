@@ -331,3 +331,66 @@ const List<(IconData, String)> kSocialLinks = [
   (Icons.smart_display_outlined, 'YouTube'),
   (Icons.work_outline_rounded, 'LinkedIn'),
 ];
+
+// ── Account menu ─────────────────────────────────────────────────────────────
+
+/// What an account-menu item does when tapped.
+enum AccountAction {
+  signIn,
+  bookStay,
+  listProperty,
+  about,
+  trips,
+  accountSettings,
+  contact,
+  help,
+  logout,
+}
+
+class AccountMenuItem {
+  const AccountMenuItem(this.action, this.label, this.icon);
+
+  final AccountAction action;
+  final String label;
+  final IconData icon;
+}
+
+/// Grouped account-menu items for the current session. The first group is
+/// emphasised in the sheet. Items that need a session only appear when
+/// [signedIn] is true; "Sign up / Sign in" only appears when it is false.
+List<List<AccountMenuItem>> accountMenuGroups({required bool signedIn}) {
+  final groups = <List<AccountMenuItem>>[
+    [
+      if (!signedIn)
+        const AccountMenuItem(
+            AccountAction.signIn, 'Sign up / Sign in', Icons.login_rounded),
+    ],
+    [
+      const AccountMenuItem(AccountAction.bookStay, 'Book your stay',
+          Icons.travel_explore_rounded),
+      const AccountMenuItem(AccountAction.listProperty, 'List your property',
+          Icons.add_home_outlined),
+      const AccountMenuItem(
+          AccountAction.about, 'About us', Icons.info_outline_rounded),
+      if (signedIn)
+        const AccountMenuItem(
+            AccountAction.trips, 'Trips', Icons.luggage_outlined),
+      if (signedIn)
+        const AccountMenuItem(AccountAction.accountSettings, 'Account settings',
+            Icons.manage_accounts_outlined),
+      const AccountMenuItem(
+          AccountAction.contact, 'Contact us', Icons.mail_outline_rounded),
+      const AccountMenuItem(
+          AccountAction.help, 'Help centre', Icons.help_outline_rounded),
+    ],
+    [
+      if (signedIn)
+        const AccountMenuItem(
+            AccountAction.logout, 'Log out', Icons.logout_rounded),
+    ],
+  ];
+  return [
+    for (final g in groups)
+      if (g.isNotEmpty) g
+  ];
+}

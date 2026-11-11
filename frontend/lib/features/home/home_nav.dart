@@ -16,6 +16,7 @@ class HomeNavBar extends StatefulWidget {
     required this.onLink,
     required this.onLogin,
     required this.onSignUp,
+    required this.onAccount,
     required this.onMenu,
     required this.onLogo,
   });
@@ -23,6 +24,9 @@ class HomeNavBar extends StatefulWidget {
   final ValueChanged<HomeLink> onLink;
   final VoidCallback onLogin;
   final VoidCallback onSignUp;
+
+  /// Opens the account sheet (sign in, book a stay, help…).
+  final VoidCallback onAccount;
   final VoidCallback onMenu;
   final VoidCallback onLogo;
 
@@ -238,18 +242,12 @@ class _HomeNavBarState extends State<HomeNavBar> {
                   const SizedBox(width: 16),
                   Flexible(
                     child: PillButton(
-                        label: 'Log in',
-                        filled: false,
-                        dense: true,
-                        onPressed: widget.onLogin),
-                  ),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    child: PillButton(
                         label: 'Start free trial',
                         dense: true,
                         onPressed: widget.onSignUp),
                   ),
+                  const SizedBox(width: 10),
+                  AccountMenuButton(onPressed: widget.onAccount),
                 ] else ...[
                   Flexible(
                     child: PillButton(
@@ -429,13 +427,15 @@ class HomeMobileMenu extends StatelessWidget {
   const HomeMobileMenu({
     super.key,
     required this.onLink,
-    required this.onLogin,
     required this.onSignUp,
+    required this.onAccount,
   });
 
   final ValueChanged<HomeLink> onLink;
-  final VoidCallback onLogin;
   final VoidCallback onSignUp;
+
+  /// Opens the account sheet.
+  final VoidCallback onAccount;
 
   @override
   Widget build(BuildContext context) {
@@ -502,11 +502,11 @@ class HomeMobileMenu extends StatelessWidget {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.person_outline_rounded),
-                      title: Text('Log in or create account',
+                      title: Text('Log in or account',
                           style: GoogleFonts.outfit(fontSize: 15)),
                       onTap: () {
                         Navigator.pop(context);
-                        onLogin();
+                        onAccount();
                       },
                     ),
                     ListTile(
@@ -529,6 +529,43 @@ class HomeMobileMenu extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Outlined pill with an avatar and a menu icon that opens the account sheet.
+class AccountMenuButton extends StatelessWidget {
+  const AccountMenuButton({super.key, required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Menu and account',
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppTheme.ink,
+          side: const BorderSide(color: HomeColors.line, width: 1.5),
+          shape: const StadiumBorder(),
+          padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
+          minimumSize: Size.zero,
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 15,
+              backgroundColor: HomeColors.mist,
+              child:
+                  Icon(Icons.person_rounded, size: 19, color: HomeColors.muted),
+            ),
+            SizedBox(width: 8),
+            Icon(Icons.menu_rounded, size: 20),
+          ],
         ),
       ),
     );

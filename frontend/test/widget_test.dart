@@ -40,14 +40,80 @@ void main() {
     await _pumpApp(tester, _desktop);
 
     expect(find.text('Start free trial'), findsWidgets);
-    expect(find.text('Log in'), findsOneWidget);
     expect(find.text('Product'), findsOneWidget);
+    expect(find.byTooltip('Menu and account'), findsOneWidget);
 
-    await tester.tap(find.text('Log in'));
+    // Sign-in lives in the account sheet, as on the reference site.
+    await tester.tap(find.byTooltip('Menu and account'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sign up / Sign in'));
     await tester.pumpAndSettle();
 
     expect(find.text('Welcome back'), findsOneWidget);
     expect(find.byType(BackButton), findsOneWidget);
+  });
+
+  testWidgets('account sheet shows signed-out items and closes',
+      (tester) async {
+    await _pumpApp(tester, _desktop);
+
+    await tester.tap(find.byTooltip('Menu and account'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hey there!'), findsOneWidget);
+    for (final label in [
+      'Sign up / Sign in',
+      'Book your stay',
+      'List your property',
+      'About us',
+      'Contact us',
+      'Help centre',
+    ]) {
+      expect(find.text(label), findsWidgets, reason: label);
+    }
+    // Signed-in only items stay hidden.
+    expect(find.text('Log out'), findsNothing);
+    expect(find.text('Trips'), findsNothing);
+
+    await tester.tap(find.byTooltip('Close account menu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hey there!'), findsNothing);
+  });
+
+  testWidgets('account sheet "List your property" opens sign-up',
+      (tester) async {
+    await _pumpApp(tester, _desktop);
+
+    await tester.tap(find.byTooltip('Menu and account'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('List your property').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Create your account'), findsOneWidget);
+  });
+
+  testWidgets('phone menu opens the account sheet', (tester) async {
+    await _pumpApp(tester, _phone);
+
+    await tester.tap(find.byTooltip('Menu'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Log in or account'));
+    await tester.tap(find.text('Log in or account'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hey there!'), findsOneWidget);
+    expect(find.text('Sign up / Sign in'), findsOneWidget);
+  });
+
+  test('account menu hides session items when signed out', () {
+    List<String> labels(bool signedIn) => [
+          for (final g in accountMenuGroups(signedIn: signedIn))
+            for (final i in g) i.label,
+        ];
+    expect(labels(false), contains('Sign up / Sign in'));
+    expect(labels(false), isNot(contains('Log out')));
+    expect(labels(true), containsAll(['Trips', 'Account settings', 'Log out']));
+    expect(labels(true), isNot(contains('Sign up / Sign in')));
   });
 
   testWidgets('homepage lays out on a phone without overflow', (tester) async {
