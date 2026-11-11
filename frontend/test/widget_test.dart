@@ -7,7 +7,6 @@ import 'package:bleiben/core/network/api_client.dart';
 import 'package:bleiben/core/storage/session_store.dart';
 import 'package:bleiben/features/auth/auth_controller.dart';
 import 'package:bleiben/features/home/home_content.dart';
-import 'package:bleiben/features/stays/stays_controller.dart';
 
 const _desktop = Size(1440, 900);
 const _phone = Size(390, 844);
@@ -21,9 +20,8 @@ Future<void> _pumpApp(WidgetTester tester, Size size) async {
   final session = SessionStore();
   final api = ApiClient(session: session);
   final auth = AuthController(api: api, session: session);
-  final stays = StaysController(api: api);
 
-  await tester.pumpWidget(BleibenApp(auth: auth, stays: stays));
+  await tester.pumpWidget(BleibenApp(auth: auth, api: api));
   await tester.pump();
 }
 

@@ -19,7 +19,11 @@ class HomeNavBar extends StatefulWidget {
     required this.onAccount,
     required this.onMenu,
     required this.onLogo,
+    this.initial,
   });
+
+  /// Set when signed in: the avatar shows this letter and replaces "Log in".
+  final String? initial;
 
   final ValueChanged<HomeLink> onLink;
   final VoidCallback onLogin;
@@ -247,7 +251,17 @@ class _HomeNavBarState extends State<HomeNavBar> {
                         onPressed: widget.onSignUp),
                   ),
                   const SizedBox(width: 10),
-                  AccountMenuButton(onPressed: widget.onAccount),
+                  AccountMenuButton(
+                      onPressed: widget.onAccount, initial: widget.initial),
+                ] else if (widget.initial != null) ...[
+                  AccountMenuButton(
+                      onPressed: widget.onAccount, initial: widget.initial),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    tooltip: 'Menu',
+                    onPressed: widget.onMenu,
+                    icon: const Icon(Icons.menu_rounded),
+                  ),
                 ] else ...[
                   Flexible(
                     child: PillButton(
@@ -429,8 +443,10 @@ class HomeMobileMenu extends StatelessWidget {
     required this.onLink,
     required this.onSignUp,
     required this.onAccount,
+    this.signedIn = false,
   });
 
+  final bool signedIn;
   final ValueChanged<HomeLink> onLink;
   final VoidCallback onSignUp;
 
@@ -502,7 +518,7 @@ class HomeMobileMenu extends StatelessWidget {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.person_outline_rounded),
-                      title: Text('Log in or account',
+                      title: Text(signedIn ? 'Account' : 'Log in or account',
                           style: GoogleFonts.outfit(fontSize: 15)),
                       onTap: () {
                         Navigator.pop(context);
@@ -537,9 +553,12 @@ class HomeMobileMenu extends StatelessWidget {
 
 /// Outlined pill with an avatar and a menu icon that opens the account sheet.
 class AccountMenuButton extends StatelessWidget {
-  const AccountMenuButton({super.key, required this.onPressed});
+  const AccountMenuButton({super.key, required this.onPressed, this.initial});
 
   final VoidCallback onPressed;
+
+  /// Signed-in user's initial; a generic person icon otherwise.
+  final String? initial;
 
   @override
   Widget build(BuildContext context) {
@@ -554,17 +573,24 @@ class AccountMenuButton extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
           minimumSize: Size.zero,
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             CircleAvatar(
               radius: 15,
-              backgroundColor: HomeColors.mist,
-              child:
-                  Icon(Icons.person_rounded, size: 19, color: HomeColors.muted),
+              backgroundColor:
+                  initial == null ? HomeColors.mist : AppTheme.forest,
+              child: initial == null
+                  ? const Icon(Icons.person_rounded,
+                      size: 19, color: HomeColors.muted)
+                  : Text(initial!,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700)),
             ),
-            SizedBox(width: 8),
-            Icon(Icons.menu_rounded, size: 20),
+            const SizedBox(width: 8),
+            const Icon(Icons.menu_rounded, size: 20),
           ],
         ),
       ),
