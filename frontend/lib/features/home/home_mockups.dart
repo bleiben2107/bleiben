@@ -325,8 +325,24 @@ class _Property {
 }
 
 /// Multi-property timeline with colour-coded bookings from each channel.
-class CalendarMock extends StatelessWidget {
+class CalendarMock extends StatefulWidget {
   const CalendarMock({super.key});
+
+  @override
+  State<CalendarMock> createState() => _CalendarMockState();
+}
+
+class _CalendarMockState extends State<CalendarMock> {
+  /// (row, day) pairs the visitor blocked by tapping an open date.
+  final Set<(int, int)> _blockedByVisitor = {};
+
+  void _toggle(int row, int day) {
+    setState(() {
+      if (!_blockedByVisitor.remove((row, day))) {
+        _blockedByVisitor.add((row, day));
+      }
+    });
+  }
 
   static const _days = 10;
   static const _dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -423,14 +439,14 @@ class CalendarMock extends StatelessWidget {
     var day = 0;
     for (final booking in bookings) {
       while (day < booking.start) {
-        segments.add(Expanded(child: _price(property, day)));
+        segments.add(Expanded(child: _price(row, property, day)));
         day++;
       }
       segments.add(Expanded(flex: booking.nights, child: _bar(booking)));
       day += booking.nights;
     }
     while (day < _days) {
-      segments.add(Expanded(child: _price(property, day)));
+      segments.add(Expanded(child: _price(row, property, day)));
       day++;
     }
 
@@ -481,15 +497,35 @@ class CalendarMock extends StatelessWidget {
     );
   }
 
-  Widget _price(_Property property, int day) {
+  Widget _price(int row, _Property property, int day) {
     final weekend = day % 7 >= 5;
     final price = property.basePrice + (weekend ? 1000 : 0);
-    return Container(
-      height: 38,
-      alignment: Alignment.center,
-      child: Text(
-        _compactPrice(price),
-        style: _tiny(color: weekend ? AppTheme.clay : HomeColors.muted),
+    final blocked = _blockedByVisitor.contains((row, day));
+    return Tooltip(
+      message: blocked ? 'Tap to reopen' : 'Tap to block this date',
+      waitDuration: const Duration(milliseconds: 600),
+      child: InkWell(
+        onTap: () => _toggle(row, day),
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          height: 38,
+          margin: const EdgeInsets.all(2),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color:
+                blocked ? _blocked.withValues(alpha: 0.25) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: blocked
+              ? const Icon(Icons.block_rounded,
+                  size: 15, color: HomeColors.muted)
+              : Text(
+                  _compactPrice(price),
+                  style:
+                      _tiny(color: weekend ? AppTheme.clay : HomeColors.muted),
+                ),
+        ),
       ),
     );
   }
@@ -566,6 +602,160 @@ class _LegendDot extends StatelessWidget {
         const SizedBox(width: 6),
         Text(label, style: _tiny()),
       ],
+    );
+  }
+}
+
+// ── Phone calendar mockup ────────────────────────────────────────────────────
+
+/// The same calendar as it looks in the Bleiben mobile app.
+class PhoneCalendarMock extends StatelessWidget {
+  const PhoneCalendarMock({super.key});
+
+  static const _homes = [
+    'Cedar Cabin',
+    'Riverside Loft',
+    'Tea Garden',
+    'Old Town',
+    'Lake House'
+  ];
+  static const _days = ['W', 'T', 'F', 'S', 'S'];
+
+  // Channel index per (home, day); -1 = open.
+  static const _grid = [
+    [0, 0, -1, 4, 4],
+    [1, 1, 1, -1, -1],
+    [-1, 2, 2, 2, -1],
+    [-1, 3, 3, 3, 3],
+    [0, -1, -1, 4, 4],
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 250,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: HomeColors.night,
+        borderRadius: BorderRadius.circular(38),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.ink.withValues(alpha: 0.18),
+            blurRadius: 30,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(30),
+        child: ColoredBox(
+          color: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Text('12:20',
+                        style: _tiny(
+                            color: AppTheme.ink, weight: FontWeight.w600)),
+                    const Spacer(),
+                    const Icon(Icons.signal_cellular_alt_rounded, size: 12),
+                    const SizedBox(width: 3),
+                    const Icon(Icons.battery_full_rounded, size: 12),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text('Calendar',
+                    style: GoogleFonts.outfit(
+                        fontSize: 18, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                const Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _MiniChip('All · 5', Icons.home_work_outlined),
+                    _MiniChip('In sync', Icons.sync_rounded, highlight: true),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    const SizedBox(width: 74),
+                    for (var d = 0; d < _days.length; d++)
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text(_days[d], style: _tiny()),
+                            Text('${15 + d}',
+                                style: _tiny(
+                                    color: AppTheme.ink,
+                                    weight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                for (var h = 0; h < _homes.length; h++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 74,
+                          child: Text(
+                            _homes[h],
+                            overflow: TextOverflow.ellipsis,
+                            style: _tiny(
+                                color: AppTheme.ink, weight: FontWeight.w600),
+                          ),
+                        ),
+                        for (final c in _grid[h])
+                          Expanded(
+                            child: Container(
+                              height: 26,
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 1.5),
+                              decoration: BoxDecoration(
+                                color: c < 0
+                                    ? HomeColors.mist
+                                    : kChannels[c].color,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.forest.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.notifications_active_outlined,
+                          size: 16, color: AppTheme.forest),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'New Airbnb booking · Lake House, 2 nights',
+                          style: _tiny(
+                              color: AppTheme.forest, weight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
