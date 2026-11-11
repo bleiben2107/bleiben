@@ -3,6 +3,10 @@
 Rahul's part (auth, account settings, organisation + roles) is in place. Build
 property/unit, calendar and booking modules on top of it like this.
 
+**Before building a screen, read the Homeyhuts REA in
+[docs/rea/homyhuts/](rea/homyhuts/README.md)**. It lists every host-panel
+screen, its fields, access rules and APIs, and maps them to Bleiben modules.
+
 ## Backend (`backend/`)
 
 - **Every request is signed in.** Mount routes behind `requireUser(db)`

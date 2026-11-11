@@ -1,0 +1,73 @@
+# Source: REA of homeyhuts.com / host.homeyhuts.com public JS bundles, captured 2026-11-11.
+# Method: static extraction of URL templates from the shipped JavaScript. `${...}` = runtime value.
+# App: homeyhuts.com (guest + marketing portal, Next.js). Base: https://api.homeyhuts.com
+
+POST    /auth/api/bulk-messaging  (BULK_MESSAGING_PUBLIC)/resubscribe
+POST    /auth/api/bulk-messaging  (BULK_MESSAGING_PUBLIC)/unsubscribe
+POST    /auth/api/v1/change-password
+GET     /auth/api/v1/host-user/get-bank-detail/${e.id}
+POST    /auth/api/v1/host-user/host-bank-detail
+POST    /auth/api/v1/login-with-email-otp
+POST    /auth/api/v1/login-with-otp
+GET     /auth/api/v1/masters/country
+GET     /auth/api/v1/masters/property/states?stateName=${e}
+GET     /auth/api/v1/masters/state?&countryId=${e}
+POST    /auth/api/v1/otp/create-otp
+POST    /auth/api/v1/otp/verify-otp
+GET     /auth/api/v1/user-verification  (USERVERIFICATION)/verification-info
+PUT     /auth/api/v1/users  (USERINFO)/${e._id}
+GET     /auth/api/v1/users  (USERINFO)/${e.id}
+POST    /auth/api/v1/users  (USERINFO)/resend-verification-link
+PATCH   /auth/api/v1/users  (USERINFO)/status/${e.id}
+POST    /auth/api/v1/users  (USERINFO)/verify-email-link
+POST    /auth/api/v1/users/check-email-verification-status
+POST    /auth/api/v1/users/guest-register
+GET     /auth/api/v1/users/profile-info
+PUT     /auth/api/v1/users/user-email-update
+PUT     /auth/api/v1/users/user-phone-update
+POST    /auth/api/v1/users/verify-email-link
+POST    /auth/api/v1/verify-email-otp
+POST    /auth/api/v1/verify-login-otp
+POST    /campaign/api/v1/contact
+GET     /cms/api/v1/help-video-screen
+GET     /cms/api/v1/help-video/by-screen
+GET     /cms/api/v1/home-page/destination
+GET     /cms/api/v1/home-page/header
+GET     /cms/api/v1/home-page/offer
+GET     /cms/api/v1/media-contents
+GET     /cms/api/v1/page/${encodeURIComponent(e)}
+GET     /cms/api/v1/page/published
+GET     /cms/api/v1/whatapp
+GET     /cms/api/v1/whatapp/${e}
+POST    /files/api/v1/upload-files-with-size-formatter
+GET     /host-it-yourself/api/v1/check-user-have-channel-manager
+POST    /host-it-yourself/api/v1/create-host-user
+POST    /host-it-yourself/api/v1/generate-pdf
+GET     /host-it-yourself/api/v1/get-default-plan/${e}
+GET     /host-it-yourself/api/v1/get-dues?page=${e?.page}&pageSize=${e?.pageSize}
+GET     /host-it-yourself/api/v1/get-plan-type
+POST    /host-it-yourself/api/v1/pay-due
+GET     /host-it-yourself/api/v1/referral/summary
+POST    /host-it-yourself/api/v1/request-host-it-yourself
+POST    /host-it-yourself/api/v1/verify-requested-host-it-yourself
+GET     /property/api/v1/property-address/city-list
+GET     /property/api/v1/property-block-date/${r}
+GET     /property/api/v1/property-block-date/check-block-date
+GET     /property/api/v1/property-search/home-page-list-v2
+GET/POST /property/api/v1/property-search/v3
+GET     /property/api/v1/property-seo/${encodeURIComponent(t)}
+GET     /property/api/v1/property-seo/by-slug/${encodeURIComponent(t)}
+POST    /property/api/v1/property-user-agreement
+POST    /property/api/v1/property-user-agreement/generate-property-agreement
+POST    /property/api/v1/property-view-count
+GET     /property/api/v1/property/booking/${e.propertySerialId}/destination=${e.destination}&checkin=${e.checkIn}&checkout=${e.checkOut}&adults=${e.adults}&children=${e.children}&infants=${e.infants}&pets=${e.pets}
+GET     /property/api/v1/property/booking/${t}
+GET     /property/api/v1/property/property-combined-filter-web
+POST    /property/api/v1/property/rate-trip/${e}
+GET     /property/api/v1/property/search-filter
+GET     /property/api/v1/property/unified-search
+POST    /property/api/v1/property/update-property-like/${e}
+POST    /property/api/v1/property/update-property-share/${e?.id}?metaData=${JSON.stringify({checkIn:e?.checkIn,checkOut:e?.checkOut})}
+GET/POST /property/api/v1/recent-searches
+POST    /property/api/v1/recent-searches/merge
+GET     /property/api/v1/trip-rating/properties/${e}
