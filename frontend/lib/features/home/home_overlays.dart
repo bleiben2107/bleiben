@@ -624,3 +624,140 @@ class FloatingActions extends StatelessWidget {
     );
   }
 }
+
+// ── Account sheet ────────────────────────────────────────────────────────────
+
+/// Slides the account menu in from the right. Resolves to the tapped action,
+/// or null when the sheet is dismissed.
+Future<AccountAction?> showAccountSheet(
+  BuildContext context, {
+  bool signedIn = false,
+  String? displayName,
+}) {
+  return showGeneralDialog<AccountAction>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Close account menu',
+    barrierColor: Colors.black.withValues(alpha: 0.35),
+    transitionDuration: const Duration(milliseconds: 240),
+    pageBuilder: (context, _, __) => Align(
+      alignment: Alignment.centerRight,
+      child: AccountSheet(signedIn: signedIn, displayName: displayName),
+    ),
+    transitionBuilder: (context, animation, _, child) => SlideTransition(
+      position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+      child: child,
+    ),
+  );
+}
+
+class AccountSheet extends StatelessWidget {
+  const AccountSheet({super.key, this.signedIn = false, this.displayName});
+
+  final bool signedIn;
+  final String? displayName;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final groups = accountMenuGroups(signedIn: signedIn);
+
+    return Material(
+      color: Colors.white,
+      elevation: 16,
+      child: SizedBox(
+        width: width < 420 ? width * 0.88 : 385,
+        height: double.infinity,
+        child: SafeArea(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      radius: 17,
+                      backgroundColor: HomeColors.mist,
+                      child: Icon(Icons.person_rounded,
+                          color: HomeColors.muted, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        signedIn && displayName != null
+                            ? displayName!
+                            : 'Hey there!',
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                            fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close account menu',
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              for (var g = 0; g < groups.length; g++)
+                Container(
+                  decoration: const BoxDecoration(
+                    border: Border(top: BorderSide(color: HomeColors.line)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final item in groups[g])
+                        _AccountRow(item: item, emphasised: g == 0),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AccountRow extends StatelessWidget {
+  const _AccountRow({required this.item, required this.emphasised});
+
+  final AccountMenuItem item;
+  final bool emphasised;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: emphasised ? HomeColors.mist : Colors.transparent,
+      child: InkWell(
+        onTap: () => Navigator.pop(context, item.action),
+        hoverColor: HomeColors.line,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Row(
+            children: [
+              Icon(item.icon,
+                  size: 19,
+                  color: emphasised ? AppTheme.forest : HomeColors.muted),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  item.label,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14.5,
+                    fontWeight: emphasised ? FontWeight.w600 : FontWeight.w400,
+                    color: AppTheme.ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
