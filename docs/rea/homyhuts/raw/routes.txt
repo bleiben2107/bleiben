@@ -1,0 +1,64 @@
+# Source: REA of homeyhuts.com (robots.txt, sitemap.xml, Next.js chunks) and
+# host.homeyhuts.com (React Router table in the shipped bundle), captured 2026-11-11.
+
+## homeyhuts.com — guest + marketing portal (Next.js)
+
+# Public (in sitemap.xml, 2,817 URLs)
+/                                   marketing homepage (PMS & channel manager pitch)
+/channel-manager                    feature page
+/unified-calendar                   feature page
+/direct-booking-website             feature page
+/unified-inbox                      feature page
+/flexi-pricing                      feature page (bulk % price changes)
+/offline-bookings                   feature page (walk-in / phone / WhatsApp bookings)
+/magic-cluster                      feature page (multi-unit grouping)
+/expenses-and-profits               feature page (P&L, NOI)
+/analytics                          feature page (ADR, RevPAR, occupancy)
+/co-hosts-and-team                  feature page (roles & permissions)
+/individual-hosts                   solution page
+/property-managers                  solution page
+/enterprise                         solution page (200+ properties)
+/new-to-hosting                     solution page
+/why-list-with-homeyhuts[/host-it-yourself]   listing pitch
+/stays                              guest search landing
+/search/{place}/homes               guest search results
+/property/{slug}                    property page (1,125 in sitemap)
+/rooms/{id}                         room page (793 in sitemap)
+/{state}[/{city}]                   location pages (goa, kerala, …)
+/locations, /help, /about-us, /contactus, /terms-conditions, /privacy-policy
+/blog/{slug}, /article/{slug}       content (348 + 462)
+/book-a-demo, /start-trial          CTAs
+
+# Private / no-index (robots.txt Disallow) — redirect to /signup-signin when signed out
+/signup-signin                      sign up / sign in (one "Email / Phone Number" field)
+/signup, /login, /phone-sign-up     older auth entry points
+/account/profile-info               Account settings → Personal info
+/account/verification               Account settings → Account Verifications
+/trips                              guest trips
+/checkout, /book, /book/stays       guest booking + payment
+/razorpay-payment                   payment return
+/host-your-property[/add-property]  start listing a property
+/host-control-center                → redirects to https://host.homeyhuts.com/
+/manage-properties, /update-listing, /property-preview
+/travel-agent, /travel-agent-center B2B travel agent area
+/unsubscribe                        email preferences
+
+## host.homeyhuts.com — Host Control Center (Vite + React SPA)
+# access: feature(<code>) = co-host needs that feature != noAccess; ownerOnly; open
+
+/dashboard                          feature(dashboard)      nav: Dashboard
+/calendar                           feature(calendar)       nav: Calendar
+/listing                            feature(property)       nav: Properties
+/listing/properties/:id             feature(property)       property editor
+/listing/cluster/:id                ownerOnly               Magic Cluster
+/listing/cluster/:id/entire-place-mode  ownerOnly           Magic Cluster
+/reservations                       feature(reservation)    nav: Reservations
+/expenses                           feature(expense)        nav: Expenses
+/inbox, /inbox/:threadId            feature(MESSAGE_INBOX)  unified inbox
+/channel-manager                    ownerOnly               nav: Channel Manager
+/account                            open                    tabs: profile | verification | payout-details
+/account/subscription-billings      (account)               plan, dues, payments
+/co-host/invite, /co-host/invite/:token   open               accept a co-host invite
+/login                              open                    host-panel login (redirects to portal sign-in)
+/webview/bookings                   mobile-app webview
+* (fallback)
