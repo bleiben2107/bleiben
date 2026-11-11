@@ -6,7 +6,11 @@ import 'package:bleiben/app.dart';
 import 'package:bleiben/core/network/api_client.dart';
 import 'package:bleiben/core/storage/session_store.dart';
 import 'package:bleiben/features/auth/auth_controller.dart';
+import 'package:bleiben/features/home/home_content.dart';
 import 'package:bleiben/features/stays/stays_controller.dart';
+
+const _desktop = Size(1440, 900);
+const _phone = Size(390, 844);
 
 Future<void> _pumpApp(WidgetTester tester, Size size) async {
   GoogleFonts.config.allowRuntimeFetching = false;
@@ -23,14 +27,21 @@ Future<void> _pumpApp(WidgetTester tester, Size size) async {
   await tester.pump();
 }
 
+Future<void> _scrollAndTap(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('signed-out visitors land on the homepage (desktop)',
       (tester) async {
-    await _pumpApp(tester, const Size(1440, 900));
+    await _pumpApp(tester, _desktop);
 
     expect(find.text('Start free trial'), findsWidgets);
     expect(find.text('Log in'), findsOneWidget);
-    expect(find.text('Pricing'), findsWidgets);
+    expect(find.text('Product'), findsOneWidget);
 
     await tester.tap(find.text('Log in'));
     await tester.pumpAndSettle();
@@ -40,13 +51,13 @@ void main() {
   });
 
   testWidgets('homepage lays out on a phone without overflow', (tester) async {
-    await _pumpApp(tester, const Size(390, 844));
+    await _pumpApp(tester, _phone);
 
     expect(find.byTooltip('Menu'), findsOneWidget);
 
     // Scroll the whole page so every section is built and laid out.
     final scrollable = find.byType(Scrollable).first;
-    for (var i = 0; i < 40; i++) {
+    for (var i = 0; i < 90; i++) {
       await tester.drag(scrollable, const Offset(0, -600));
       await tester.pump();
     }
@@ -54,11 +65,94 @@ void main() {
   });
 
   testWidgets('Start free trial opens the sign-up form', (tester) async {
-    await _pumpApp(tester, const Size(1440, 900));
+    await _pumpApp(tester, _desktop);
 
     await tester.tap(find.text('Start free trial').first);
     await tester.pumpAndSettle();
 
     expect(find.text('Create your account'), findsOneWidget);
+  });
+
+  testWidgets('Product menu opens and lists features', (tester) async {
+    await _pumpApp(tester, _desktop);
+
+    await tester.tap(find.text('Product'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Channel manager'), findsWidgets);
+    expect(find.text('Smart listings'), findsWidgets);
+    expect(find.text('Book a demo →'), findsOneWidget);
+  });
+
+  testWidgets('offer bar can be dismissed', (tester) async {
+    await _pumpApp(tester, _desktop);
+    if (!kLaunchOffer.isLive) return; // Offer has ended.
+
+    expect(find.text('Claim offer'), findsOneWidget);
+    await tester.tap(find.byTooltip('Dismiss offer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Claim offer'), findsNothing);
+  });
+
+  testWidgets('channels chip opens the supported-channels dialog',
+      (tester) async {
+    await _pumpApp(tester, _desktop);
+
+    await _scrollAndTap(tester, find.byTooltip('See all supported channels'));
+    expect(find.text('Supported channels'), findsOneWidget);
+  });
+
+  testWidgets('tapping an open calendar date blocks it', (tester) async {
+    await _pumpApp(tester, _desktop);
+
+    expect(find.byTooltip('Tap to reopen'), findsNothing);
+    await _scrollAndTap(tester, find.byTooltip('Tap to block this date').first);
+    expect(find.byTooltip('Tap to reopen'), findsOneWidget);
+  });
+
+  testWidgets('FAQ expands to show every question', (tester) async {
+    await _pumpApp(tester, _desktop);
+
+    expect(find.text(kFaqs.last.$1), findsNothing);
+    await _scrollAndTap(
+        tester, find.text('Show all ${kFaqs.length} questions'));
+    expect(find.text(kFaqs.last.$1), findsOneWidget);
+  });
+
+  testWidgets('demo form validates and confirms a request', (tester) async {
+    await _pumpApp(tester, _desktop);
+
+    await tester.tap(find.widgetWithText(FloatingActionButton, 'Book a demo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Request demo'), findsOneWidget);
+
+    // Empty submit shows validation errors.
+    await tester.tap(find.text('Request demo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Please enter your name'), findsOneWidget);
+    expect(find.text('Pick a date and a time slot'), findsOneWidget);
+
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Your name'), 'Asha Rao');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Email or phone number'),
+        'asha@example.com');
+
+    await tester.tap(find.text('How many properties?'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2–5 properties').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Pick a date'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('11:30'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Request demo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Request received'), findsOneWidget);
   });
 }

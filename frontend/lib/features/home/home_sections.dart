@@ -3,7 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme/app_theme.dart';
+import 'home_content.dart';
 import 'home_mockups.dart';
+import 'home_overlays.dart';
 import 'home_widgets.dart';
 
 TextStyle _body(
@@ -19,10 +21,18 @@ TextStyle _title({double size = 18, Color color = AppTheme.ink}) =>
 // ── 1. Hero ──────────────────────────────────────────────────────────────────
 
 class HeroSection extends StatelessWidget {
-  const HeroSection({super.key, required this.onStart, required this.onTalk});
+  const HeroSection({
+    super.key,
+    required this.onStart,
+    required this.onTalk,
+    required this.onSeePricing,
+    required this.onAllChannels,
+  });
 
   final VoidCallback onStart;
   final VoidCallback onTalk;
+  final VoidCallback onSeePricing;
+  final VoidCallback onAllChannels;
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +84,23 @@ class HeroSection extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: [for (final c in kChannels) _ChannelChip(c)],
+          children: [
+            for (final c in kChannels) _ChannelChip(c),
+            ActionChip(
+              tooltip: 'See all supported channels',
+              onPressed: onAllChannels,
+              label:
+                  Text('+${kSupportedChannels.length - kChannels.length} more'),
+              labelStyle: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.forest),
+              backgroundColor: Colors.white,
+              side: const BorderSide(color: HomeColors.line),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ],
         ),
         const SizedBox(height: 34),
         Wrap(
@@ -95,7 +121,29 @@ class HeroSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        Text('No card needed · Cancel anytime', style: _body(size: 13.5)),
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 4,
+          children: [
+            Text('No card needed · Cancel anytime ·', style: _body(size: 13.5)),
+            TextButton(
+              onPressed: onSeePricing,
+              style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  minimumSize: Size.zero),
+              child: Text('See pricing',
+                  style: GoogleFonts.outfit(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.forest,
+                      decoration: TextDecoration.underline)),
+            ),
+          ],
+        ),
+        if (kLaunchOffer.isLive) ...[
+          const SizedBox(height: 22),
+          OfferCard(offer: kLaunchOffer, onSeePricing: onSeePricing),
+        ],
       ],
     );
 
@@ -240,7 +288,10 @@ class FeatureTilesSection extends StatelessWidget {
 // ── 3. Unified calendar ──────────────────────────────────────────────────────
 
 class CalendarSection extends StatelessWidget {
-  const CalendarSection({super.key});
+  const CalendarSection({super.key, required this.onExplore});
+
+  /// "See the calendar live" — opens the demo booking.
+  final VoidCallback onExplore;
 
   static const _points = [
     (
@@ -279,8 +330,45 @@ class CalendarSection extends StatelessWidget {
                 'Airbnb, Booking.com, Vrbo, walk-ins and your own website on one timeline — '
                 'on the web and in your pocket.',
           ),
-          const SizedBox(height: 44),
-          const CalendarMock(),
+          const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: HomeColors.line),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.touch_app_outlined,
+                    size: 16, color: AppTheme.clay),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text('Try it: tap any open date to block it',
+                      style: _body(size: 13.5, color: AppTheme.ink)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 26),
+          if (HomeLayout.width(context) >= 1180)
+            const Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(child: CalendarMock()),
+                SizedBox(width: 28),
+                PhoneCalendarMock(),
+              ],
+            )
+          else ...[
+            const CalendarMock(),
+            const SizedBox(height: 28),
+            const Center(child: PhoneCalendarMock()),
+          ],
+          const SizedBox(height: 12),
+          Text('The same live calendar, on web and mobile.',
+              textAlign: TextAlign.center, style: _body(size: 14)),
           const SizedBox(height: 36),
           ResponsiveGrid(
             minItemWidth: 240,
@@ -298,6 +386,15 @@ class CalendarSection extends StatelessWidget {
                   ],
                 ),
             ],
+          ),
+          const SizedBox(height: 28),
+          TextButton(
+            onPressed: onExplore,
+            child: Text('See the calendar live in a demo →',
+                style: GoogleFonts.outfit(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.forest)),
           ),
         ],
       ),
@@ -493,7 +590,10 @@ class _FeatureTab {
 }
 
 class FeatureTabsSection extends StatefulWidget {
-  const FeatureTabsSection({super.key});
+  const FeatureTabsSection({super.key, required this.onLearnMore});
+
+  /// Called with the tab label when "Learn more" is pressed.
+  final ValueChanged<String> onLearnMore;
 
   @override
   State<FeatureTabsSection> createState() => _FeatureTabsSectionState();
@@ -550,7 +650,19 @@ class _FeatureTabsSectionState extends State<FeatureTabsSection> {
       ],
     ),
     _FeatureTab(
-      'Pricing',
+      'Smart listings',
+      Icons.dashboard_customize_outlined,
+      'One property. Many listings. Zero double bookings.',
+      ['Room or whole home', 'Linked availability', 'Peak-season mode'],
+      [
+        'List the same home as single rooms, room combinations or the entire property.',
+        'A booking on any version closes the overlapping ones automatically.',
+        'Fill more nights in the off season by letting guests book the way they want.',
+        'Switch to whole-home only for peak dates with one tap.',
+      ],
+    ),
+    _FeatureTab(
+      'Bulk pricing',
       Icons.trending_up_rounded,
       'Single or bulk price changes, without the busywork.',
       ['Bulk updates', 'Percentage rules', 'Seasons'],
@@ -572,6 +684,19 @@ class _FeatureTabsSectionState extends State<FeatureTabsSection> {
         'Spot which homes earn the most — and which cost you.',
         'Export clean reports for your accountant.',
       ],
+    ),
+    _FeatureTab(
+      'Analytics',
+      Icons.insights_outlined,
+      'Turn your booking data into better decisions.',
+      ['Occupancy & ADR', 'Channel mix', 'Portfolio trends'],
+      [
+        'Track revenue, occupancy, average daily rate and direct-booking share.',
+        'See which channels and properties perform best.',
+        'Compare months and seasons across your whole portfolio.',
+        'Coming soon: ask questions about your business in plain language.',
+      ],
+      soon: true,
     ),
     _FeatureTab(
       'Inbox',
@@ -630,6 +755,14 @@ class _FeatureTabsSectionState extends State<FeatureTabsSection> {
         const SizedBox(height: 16),
         for (final b in tab.bullets)
           BulletLine(b, icon: Icons.arrow_forward_rounded),
+        const SizedBox(height: 12),
+        TextButton(
+          onPressed: () => widget.onLearnMore(tab.label),
+          style: TextButton.styleFrom(padding: EdgeInsets.zero),
+          child: Text('Learn more about ${tab.label.toLowerCase()} →',
+              style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w600, color: AppTheme.forest)),
+        ),
       ],
     );
 
@@ -1058,7 +1191,7 @@ class _PricingSectionState extends State<PricingSection> {
   // Placeholder list prices in INR per month; replace with real plan pricing.
   static const int _perListingMonthly = 499;
   static const int _websiteMonthly = 299;
-  static const double _annualDiscount = 0.2;
+  static const _presets = [1, 10, 20, 30, 40, 50];
   static const int _maxListings = 50;
 
   bool _annual = true;
@@ -1071,7 +1204,7 @@ class _PricingSectionState extends State<PricingSection> {
   int get _monthlyTotal {
     final base =
         _listings * _perListingMonthly + (_website ? _websiteMonthly : 0);
-    return _annual ? (base * (1 - _annualDiscount)).round() : base;
+    return _annual ? (base * (1 - currentAnnualDiscount)).round() : base;
   }
 
   void _setListings(int value) =>
@@ -1088,9 +1221,12 @@ class _PricingSectionState extends State<PricingSection> {
         const SizedBox(height: 10),
         SegmentedButton<bool>(
           showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: true, label: Text('Annual · save 20%')),
-            ButtonSegment(value: false, label: Text('Monthly')),
+          segments: [
+            ButtonSegment(
+                value: true,
+                label: Text(
+                    'Annual · save ${(currentAnnualDiscount * 100).round()}%')),
+            const ButtonSegment(value: false, label: Text('Monthly')),
           ],
           selected: {_annual},
           onSelectionChanged: (s) => setState(() => _annual = s.first),
@@ -1122,6 +1258,24 @@ class _PricingSectionState extends State<PricingSection> {
                   : null,
               icon: const Icon(Icons.add_rounded),
             ),
+          ],
+        ),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final p in _presets)
+              ChoiceChip(
+                label: Text(p == _maxListings ? '$p+' : '$p'),
+                selected: _listings == p,
+                onSelected: (_) => _setListings(p),
+                showCheckmark: false,
+                selectedColor: AppTheme.forest,
+                labelStyle: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w600,
+                  color: _listings == p ? Colors.white : AppTheme.ink,
+                ),
+              ),
           ],
         ),
         Slider(
@@ -1429,12 +1583,33 @@ class _ReviewsSectionState extends State<ReviewsSection> {
     ),
   ];
 
+  static const double _cardStride = 340 + 18;
   final _scroll = ScrollController();
+  int _current = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(() {
+      final page =
+          (_scroll.offset / _cardStride).round().clamp(0, _reviews.length - 1);
+      if (page != _current) setState(() => _current = page);
+    });
+  }
 
   @override
   void dispose() {
     _scroll.dispose();
     super.dispose();
+  }
+
+  void _jumpTo(int index) {
+    if (!_scroll.hasClients) return;
+    _scroll.animateTo(
+      (index * _cardStride).clamp(0.0, _scroll.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOut,
+    );
   }
 
   void _page(int direction) {
@@ -1547,6 +1722,31 @@ class _ReviewsSectionState extends State<ReviewsSection> {
               },
             ),
           ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < _reviews.length; i++)
+                Semantics(
+                  button: true,
+                  label: 'Review ${i + 1}',
+                  child: GestureDetector(
+                    onTap: () => _jumpTo(i),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: i == _current ? 22 : 8,
+                      height: 8,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        color:
+                            i == _current ? AppTheme.forest : HomeColors.line,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -1616,95 +1816,6 @@ class FinalCtaSection extends StatelessWidget {
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── 12. Footer ───────────────────────────────────────────────────────────────
-
-class HomeFooter extends StatelessWidget {
-  const HomeFooter({super.key, required this.onNavigate});
-
-  final void Function(String section) onNavigate;
-
-  static const _columns = [
-    ('Product', ['Calendar', 'Channel manager', 'Booking website', 'Pricing']),
-    ('Company', ['About us', 'Careers', 'Contact']),
-    ('Resources', ['Help centre', 'Host handbook', 'Privacy policy', 'Terms']),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final brand = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const BleibenWordmark(dark: true),
-        const SizedBox(height: 14),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 300),
-          child: Text(
-            'The calm way to run homestays, villas and holiday homes.',
-            style: _body(size: 14.5, color: Colors.white60),
-          ),
-        ),
-      ],
-    );
-
-    final links = [
-      for (final (heading, items) in _columns)
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(heading, style: _title(size: 15, color: Colors.white)),
-            const SizedBox(height: 12),
-            for (final item in items)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: InkWell(
-                  onTap: () => onNavigate(item),
-                  child:
-                      Text(item, style: _body(size: 14, color: Colors.white60)),
-                ),
-              ),
-          ],
-        ),
-    ];
-
-    return Container(
-      width: double.infinity,
-      color: HomeColors.night,
-      padding: EdgeInsets.symmetric(
-          horizontal: HomeLayout.gutter(context), vertical: 56),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: HomeLayout.maxWidth),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (HomeLayout.isWide(context))
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(flex: 2, child: brand),
-                    for (final l in links) Expanded(child: l),
-                  ],
-                )
-              else ...[
-                brand,
-                const SizedBox(height: 32),
-                Wrap(spacing: 48, runSpacing: 24, children: links),
-              ],
-              const SizedBox(height: 40),
-              const Divider(color: Colors.white12),
-              const SizedBox(height: 16),
-              Text(
-                '© ${DateTime.now().year} Bleiben. All rights reserved.',
-                style: _body(size: 13, color: Colors.white38),
-              ),
-            ],
-          ),
         ),
       ),
     );
