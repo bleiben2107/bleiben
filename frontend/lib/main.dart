@@ -4,7 +4,6 @@ import 'app.dart';
 import 'core/network/api_client.dart';
 import 'core/storage/session_store.dart';
 import 'features/auth/auth_controller.dart';
-import 'features/stays/stays_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,12 +11,14 @@ Future<void> main() async {
   await session.load();
   final api = ApiClient(session: session);
   final auth = AuthController(api: api, session: session);
-  final stays = StaysController(api: api);
-  if (session.isSignedIn) {
-    await auth.loadProfile();
-    if (auth.isSignedIn) {
-      await stays.refresh();
-    }
+
+  // Team invite links land here (?invite_token=…); the invite is accepted
+  // as soon as the user is signed in.
+  final invite = Uri.base.queryParameters['invite_token'];
+  if (invite != null && invite.isNotEmpty) {
+    await auth.rememberInvite(invite);
   }
-  runApp(BleibenApp(auth: auth, stays: stays));
+
+  if (session.isSignedIn) await auth.loadProfile();
+  runApp(BleibenApp(auth: auth, api: api));
 }

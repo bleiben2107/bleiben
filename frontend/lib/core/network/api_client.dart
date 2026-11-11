@@ -6,10 +6,13 @@ import '../config/api_config.dart';
 import '../storage/session_store.dart';
 
 class ApiException implements Exception {
-  ApiException(this.message, {this.statusCode});
+  ApiException(this.message, {this.statusCode, this.body});
 
   final String message;
   final int? statusCode;
+
+  /// Decoded error body, e.g. `retry_after` or `missing`.
+  final Map<String, dynamic>? body;
 
   @override
   String toString() => message;
@@ -28,13 +31,17 @@ class ApiClient {
     final headers = <String, String>{'Content-Type': 'application/json'};
     if (auth && session.token != null) {
       headers['Authorization'] = 'Bearer ${session.token}';
+      if (session.activeOrgId != null) {
+        headers['X-Org-Id'] = '${session.activeOrgId}';
+      }
     }
     return headers;
   }
 
   Future<dynamic> get(String path) => _send('GET', path);
 
-  Future<dynamic> post(String path, Map<String, dynamic> body, {bool auth = true}) {
+  Future<dynamic> post(String path, Map<String, dynamic> body,
+      {bool auth = true}) {
     return _send('POST', path, body: body, auth: auth);
   }
 
@@ -62,18 +69,28 @@ class ApiClient {
     try {
       streamed = await _http.send(request);
     } catch (_) {
-      throw ApiException('Cannot reach the Bleiben API at ${ApiConfig.baseUrl}');
+      throw ApiException(
+          'Cannot reach the Bleiben API at ${ApiConfig.baseUrl}');
     }
     final response = await http.Response.fromStream(streamed);
     if (response.statusCode == 204 || response.body.isEmpty) {
+      if (response.statusCode >= 400) {
+        throw ApiException('Request failed (${response.statusCode})',
+            statusCode: response.statusCode);
+      }
       return null;
     }
-    final decoded = expectJson ? jsonDecode(response.body) : response.body;
+    dynamic decoded;
+    try {
+      decoded = expectJson ? jsonDecode(response.body) : response.body;
+    } on FormatException {
+      decoded = response.body;
+    }
     if (response.statusCode >= 400) {
-      final message = decoded is Map && decoded['detail'] != null
-          ? decoded['detail'].toString()
-          : 'Request failed (${response.statusCode})';
-      throw ApiException(message, statusCode: response.statusCode);
+      final map = decoded is Map<String, dynamic> ? decoded : null;
+      final message = map?['detail']?.toString() ??
+          'Request failed (${response.statusCode})';
+      throw ApiException(message, statusCode: response.statusCode, body: map);
     }
     return decoded;
   }

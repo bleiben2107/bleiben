@@ -4,9 +4,27 @@
     {
       "name": "bleiben-web",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5180", "--bind", "127.0.0.1", "--directory", "frontend/build/web"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5180",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "frontend/build/web"
+      ],
       "port": 5180,
       "url": "http://127.0.0.1:5180"
+    },
+    {
+      "name": "bleiben-api",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd backend && set USE_LOCAL_STORE=1&& set DATA_FILE=./data/e2e-local.json&& node src/index.js"
+      ],
+      "port": 8000,
+      "url": "http://127.0.0.1:8000"
     }
   ]
 }

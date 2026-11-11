@@ -662,6 +662,8 @@ class AccountSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final groups = accountMenuGroups(signedIn: signedIn);
+    final name = displayName?.trim() ?? '';
+    final initial = name.isEmpty ? null : name[0].toUpperCase();
 
     return Material(
       color: Colors.white,
@@ -677,11 +679,18 @@ class AccountSheet extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
                 child: Row(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 17,
-                      backgroundColor: HomeColors.mist,
-                      child: Icon(Icons.person_rounded,
-                          color: HomeColors.muted, size: 22),
+                      backgroundColor: signedIn && initial != null
+                          ? AppTheme.ink
+                          : HomeColors.mist,
+                      child: signedIn && initial != null
+                          ? Text(initial,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600))
+                          : const Icon(Icons.person_rounded,
+                              color: HomeColors.muted, size: 22),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

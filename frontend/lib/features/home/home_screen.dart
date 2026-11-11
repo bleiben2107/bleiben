@@ -7,15 +7,33 @@ import 'home_overlays.dart';
 import 'home_sections.dart';
 import 'home_widgets.dart';
 
-/// Public marketing homepage shown to signed-out visitors.
+/// Marketing homepage. Signed-out visitors and signed-in users both land here
+/// (as on homyhuts): signing in only swaps "Log in" for the account avatar.
+/// Signed in, the account menu opens Account settings or logs out; its other
+/// entries are placeholders for now.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.onLogin, required this.onSignUp});
+  const HomeScreen({
+    super.key,
+    required this.onLogin,
+    required this.onSignUp,
+    this.signedIn = false,
+    this.displayName,
+    this.onAccountSettings,
+    this.onLogout,
+  });
 
   /// Opens the sign-in flow.
   final VoidCallback onLogin;
 
   /// Opens the sign-up flow (used by every "Start free trial" button).
   final VoidCallback onSignUp;
+
+  final bool signedIn;
+  final String? displayName;
+
+  /// Signed in only: opens Account settings.
+  final VoidCallback? onAccountSettings;
+  final VoidCallback? onLogout;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -76,9 +94,34 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Avatar letter for a signed-in host (homyhuts shows the first initial).
+  String? get _initial {
+    final name = widget.displayName?.trim() ?? '';
+    return widget.signedIn && name.isNotEmpty ? name[0].toUpperCase() : null;
+  }
+
+  /// Every "Start free trial" / "List your property" button.
+  /// Signed in, property setup isn't built yet, so it only says so.
+  void _start() => widget.signedIn
+      ? _notice('Property listing is coming soon.')
+      : widget.onSignUp();
+
   Future<void> _openAccount() async {
-    final action = await showAccountSheet(context);
+    final action = await showAccountSheet(context,
+        signedIn: widget.signedIn, displayName: widget.displayName);
     if (action == null || !mounted) return;
+    if (widget.signedIn) {
+      // Only these two work for now; the rest of the menu is a placeholder.
+      switch (action) {
+        case AccountAction.accountSettings:
+          widget.onAccountSettings?.call();
+        case AccountAction.logout:
+          widget.onLogout?.call();
+        default:
+          break;
+      }
+      return;
+    }
     switch (action) {
       case AccountAction.signIn:
         widget.onLogin();
@@ -92,7 +135,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _notice('About us is coming soon.');
       case AccountAction.bookStay:
         _notice('Booking a stay is coming soon.');
-      // Signed-in only; the homepage is shown to signed-out visitors.
       case AccountAction.trips ||
             AccountAction.accountSettings ||
             AccountAction.logout:
@@ -107,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case DemoLink():
         _bookDemo();
       case SignUpLink():
-        widget.onSignUp();
+        _start();
       case PendingLink(:final label):
         _notice('$label is coming soon.');
     }
@@ -125,8 +167,9 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.white,
       endDrawer: HomeMobileMenu(
         onLink: _handleLink,
-        onSignUp: widget.onSignUp,
+        onSignUp: _start,
         onAccount: _openAccount,
+        signedIn: widget.signedIn,
       ),
       floatingActionButton: FloatingActions(
         showBackToTop: _showBackToTop,
@@ -148,8 +191,9 @@ class _HomeScreenState extends State<HomeScreen> {
             child: HomeNavBar(
               onLink: _handleLink,
               onLogin: widget.onLogin,
-              onSignUp: widget.onSignUp,
+              onSignUp: _start,
               onAccount: _openAccount,
+              initial: _initial,
               onMenu: () => _scaffoldKey.currentState?.openEndDrawer(),
               onLogo: _toTop,
             ),
@@ -160,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 children: [
                   HeroSection(
-                    onStart: widget.onSignUp,
+                    onStart: _start,
                     onTalk: _bookDemo,
                     onSeePricing: () => _scrollTo(HomeAnchor.pricing),
                     onAllChannels: () => showChannelsDialog(context),
@@ -173,12 +217,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     onLearnMore: (label) =>
                         _notice('A detailed $label page is coming soon.'),
                   ),
-                  EverythingSection(onStart: widget.onSignUp),
+                  EverythingSection(onStart: _start),
                   const ReachSection(),
                   const PlansSection(),
                   PricingSection(
                     key: _anchors[HomeAnchor.pricing],
-                    onStart: widget.onSignUp,
+                    onStart: _start,
                     onTalk: _bookDemo,
                   ),
                   SupportSection(onTalk: _bookDemo),
@@ -188,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onPlay: (title) =>
                           _notice('“$title” — video coming soon.')),
                   FaqSection(key: _anchors[HomeAnchor.faq], onDemo: _bookDemo),
-                  FinalCtaSection(onStart: widget.onSignUp, onTalk: _bookDemo),
+                  FinalCtaSection(onStart: _start, onTalk: _bookDemo),
                   GuidesSection(
                     key: _anchors[HomeAnchor.guides],
                     onOpen: (title) => _notice('“$title” is coming soon.'),
