@@ -3,10 +3,11 @@ import express from "express";
 
 import { config, corsOriginList } from "./config.js";
 import { EmailDeliveryError, createMailer, createSmsSender } from "./messaging.js";
-import { requireUser } from "./middleware/auth.js";
+import { requireUser, orgScope } from "./middleware/auth.js";
 import { accountRouter } from "./routes/account.js";
 import { authRouter } from "./routes/auth.js";
 import { invitesRouter, orgsRouter } from "./routes/orgs.js";
+import { propertiesRouter } from "./routes/properties.js";
 import { publicUser } from "./security.js";
 import { uploadsDir } from "./uploads.js";
 import { membershipsFor } from "./session.js";
@@ -53,6 +54,12 @@ export function createApp(db, services = {}) {
   app.use("/api/account", requireUser(db), accountRouter(db, { mailer, sms }));
   app.use("/api/orgs", requireUser(db), orgsRouter(db, { mailer }));
   app.use("/api/invites", requireUser(db), invitesRouter(db));
+  app.use(
+    "/api/properties",
+    requireUser(db),
+    orgScope(db, { read: "properties.read", write: "properties.write" }),
+    propertiesRouter(db)
+  );
   app.use((err, _req, res, _next) => {
     if (err instanceof EmailDeliveryError) {
       return res.status(502).json({ detail: err.message });
