@@ -47,6 +47,7 @@ class BleibenApp extends StatelessWidget {
               }
 
               return HomeScreen(
+                api: api,
                 signedIn: signedIn,
                 displayName: signedIn ? auth.displayName : null,
                 onLogin: () => openAuth(register: false),

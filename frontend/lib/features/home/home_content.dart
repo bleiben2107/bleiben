@@ -337,6 +337,8 @@ const List<(IconData, String)> kSocialLinks = [
 /// What an account-menu item does when tapped.
 enum AccountAction {
   signIn,
+  createListing,
+  hostControl,
   bookStay,
   listProperty,
   about,
@@ -366,6 +368,12 @@ List<List<AccountMenuItem>> accountMenuGroups({required bool signedIn}) {
             AccountAction.signIn, 'Sign up / Sign in', Icons.login_rounded),
     ],
     [
+      if (signedIn) ...[
+        const AccountMenuItem(AccountAction.createListing,
+            'Create your listing', Icons.add_circle_outline_rounded),
+        const AccountMenuItem(AccountAction.hostControl,
+            'Host Control Center', Icons.dashboard_outlined),
+      ],
       const AccountMenuItem(AccountAction.bookStay, 'Book your stay',
           Icons.travel_explore_rounded),
       const AccountMenuItem(AccountAction.listProperty, 'List your property',

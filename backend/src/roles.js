@@ -21,15 +21,22 @@ export const PERMISSIONS = {
     "team.read",
     "team.manage",
     "team.assign_owner",
+    "properties.read",
+    "properties.write",
+    "properties.publish",
+    "properties.delete",
   ],
   manager: [
     "org.read",
     "org.update",
     "team.read",
     "team.manage",
+    "properties.read",
+    "properties.write",
+    "properties.publish",
   ],
-  staff: ["org.read", "team.read"],
-  read_only: ["org.read", "team.read"],
+  staff: ["org.read", "team.read", "properties.read", "properties.write"],
+  read_only: ["org.read", "team.read", "properties.read"],
 };
 
 export function isRole(value) {

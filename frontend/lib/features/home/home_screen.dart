@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../core/network/api_client.dart';
+import '../stays/add_property_wizard_screen.dart';
+import '../stays/stays_controller.dart';
 import 'home_content.dart';
 import 'home_more_sections.dart';
 import 'home_nav.dart';
@@ -14,6 +17,7 @@ import 'home_widgets.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
+    this.api,
     required this.onLogin,
     required this.onSignUp,
     this.signedIn = false,
@@ -21,6 +25,8 @@ class HomeScreen extends StatefulWidget {
     this.onAccountSettings,
     this.onLogout,
   });
+
+  final ApiClient? api;
 
   /// Opens the sign-in flow.
   final VoidCallback onLogin;
@@ -100,10 +106,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return widget.signedIn && name.isNotEmpty ? name[0].toUpperCase() : null;
   }
 
+  /// Opens property listing onboarding wizard
+  void _openWizard() => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => AddPropertyWizardScreen(
+            api: widget.api,
+            stays: widget.api != null ? StaysController(api: widget.api!) : null,
+          ),
+        ),
+      );
+
   /// Every "Start free trial" / "List your property" button.
-  /// Signed in, property setup isn't built yet, so it only says so.
   void _start() => widget.signedIn
-      ? _notice('Property listing is coming soon.')
+      ? _openWizard()
       : widget.onSignUp();
 
   Future<void> _openAccount() async {
@@ -111,8 +126,11 @@ class _HomeScreenState extends State<HomeScreen> {
         signedIn: widget.signedIn, displayName: widget.displayName);
     if (action == null || !mounted) return;
     if (widget.signedIn) {
-      // Only these two work for now; the rest of the menu is a placeholder.
       switch (action) {
+        case AccountAction.createListing ||
+              AccountAction.hostControl ||
+              AccountAction.listProperty:
+          _openWizard();
         case AccountAction.accountSettings:
           widget.onAccountSettings?.call();
         case AccountAction.logout:
@@ -125,7 +143,9 @@ class _HomeScreenState extends State<HomeScreen> {
     switch (action) {
       case AccountAction.signIn:
         widget.onLogin();
-      case AccountAction.listProperty:
+      case AccountAction.listProperty ||
+            AccountAction.createListing ||
+            AccountAction.hostControl:
         widget.onSignUp();
       case AccountAction.contact:
         _bookDemo();
