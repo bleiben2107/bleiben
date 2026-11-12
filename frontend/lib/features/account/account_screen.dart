@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:bleiben/core/theme/app_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/network/api_client.dart';
@@ -16,7 +16,7 @@ import 'account_controller.dart';
 
 enum AccountSection { personal, verification, team }
 
-const _fieldFill = Color(0xFFF4F5F4);
+const _fieldFill = Colors.white;
 
 /// Account settings (homyhuts /account/profile-info and /account/verification)
 /// plus Team & roles for the user's organisation (PRD AUTH-2).
@@ -95,7 +95,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         );
 
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: AppTheme.paper,
           body: Column(
             children: [
               _TopBar(
@@ -179,7 +179,7 @@ class _TopBar extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(right: 24),
                 child: Text('List Your Property',
-                    style: GoogleFonts.outfit(
+                    style: AppFonts.sans(
                         fontSize: 15, fontWeight: FontWeight.w500)),
               ),
             AccountMenuButton(onPressed: onMenu, initial: initial),
@@ -210,7 +210,7 @@ class _Sidebar extends StatelessWidget {
     Widget item(AccountSection s, IconData icon, String label, {Widget? badge}) {
       final active = s == selected;
       return Material(
-        color: active ? const Color(0xFFF1F1F1) : Colors.transparent,
+        color: active ? AppTheme.sage : Colors.transparent,
         child: InkWell(
           onTap: () => onSelect(s),
           child: Padding(
@@ -221,7 +221,7 @@ class _Sidebar extends StatelessWidget {
                 const SizedBox(width: 18),
                 Expanded(
                   child: Text(label,
-                      style: GoogleFonts.outfit(fontSize: 16.5)),
+                      style: AppFonts.sans(fontSize: 16.5)),
                 ),
                 if (badge != null) badge,
               ],
@@ -234,8 +234,8 @@ class _Sidebar extends StatelessWidget {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFDDDDDD)),
-        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -250,13 +250,13 @@ class _Sidebar extends StatelessWidget {
                 Flexible(
                   child: Text('Account Settings',
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontSize: 17, fontWeight: FontWeight.w500)),
                 ),
               ]),
             ),
           ),
-          const Divider(height: 1, color: Color(0xFFDDDDDD)),
+          const Divider(height: 1, color: AppTheme.border),
           item(AccountSection.personal, Icons.person_outline_rounded,
               'Personal info'),
           item(
@@ -284,11 +284,11 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: verified ? HomeColors.success : const Color(0xFFE5202E),
+        color: verified ? AppTheme.success : AppTheme.danger,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(verified ? 'Verified' : 'Pending',
-          style: GoogleFonts.outfit(
+          style: AppFonts.sans(
               color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
     );
   }
@@ -305,8 +305,8 @@ class _ContentCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(wide ? 26 : 18),
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFDDDDDD)),
-        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
       ),
       // Grey filled fields on the white card, as in the reference.
       child: Theme(
@@ -322,7 +322,7 @@ class _ContentCard extends StatelessWidget {
 }
 
 TextStyle _heading() =>
-    GoogleFonts.outfit(fontSize: 21, fontWeight: FontWeight.w600);
+    AppFonts.sans(fontSize: 21, fontWeight: FontWeight.w600);
 
 void _snack(BuildContext context, String message) {
   ScaffoldMessenger.of(context)
@@ -590,7 +590,7 @@ class _PersonalInfoState extends State<_PersonalInfo> {
             const SizedBox(height: 26),
             Text(
               'Share a little more about yourself. Only hosts of your confirmed bookings can see this, and you can see theirs too.',
-              style: GoogleFonts.outfit(color: HomeColors.muted, fontSize: 14),
+              style: AppFonts.sans(color: HomeColors.muted, fontSize: 14),
             ),
             const SizedBox(height: 16),
             pair(_field('profession', 'Profession'), _field('hobbies', 'Hobbies')),
@@ -601,7 +601,7 @@ class _PersonalInfoState extends State<_PersonalInfo> {
             _field('school', 'Where did I go to school?'),
             gap,
             Text('About yourself',
-                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w500)),
+                style: AppFonts.sans(fontSize: 15, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             _field('about', 'About yourself (Max 500 characters)',
                 maxLines: 4, maxLength: 500),
@@ -613,7 +613,7 @@ class _PersonalInfoState extends State<_PersonalInfo> {
               activeThumbColor: AppTheme.forest,
               onChanged: (v) => setState(() => _emailNotifications = v),
               title: Text('Email notifications',
-                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w500)),
+                  style: AppFonts.sans(fontSize: 16, fontWeight: FontWeight.w500)),
               subtitle: const Text('Booking updates and account alerts by email'),
             ),
             const SizedBox(height: 16),
@@ -682,7 +682,7 @@ class _AvatarEditor extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text('Edit',
                         semanticsLabel: 'Change profile photo',
-                        style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w500)),
+                        style: AppFonts.sans(fontSize: 13, fontWeight: FontWeight.w500)),
                   ]),
                 ),
               ),
@@ -720,12 +720,12 @@ class _ContactRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w500)),
+                    style: AppFonts.sans(fontSize: 17, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 2),
-                Text(value, style: GoogleFonts.outfit(fontSize: 16)),
+                Text(value, style: AppFonts.sans(fontSize: 16)),
                 if (note != null)
                   Text(note!,
-                      style: GoogleFonts.outfit(fontSize: 12.5, color: HomeColors.danger)),
+                      style: AppFonts.sans(fontSize: 12.5, color: HomeColors.danger)),
               ],
             ),
           ),
@@ -734,7 +734,7 @@ class _ContactRow extends StatelessWidget {
             style: TextButton.styleFrom(foregroundColor: AppTheme.ink),
             child: Text(action,
                 semanticsLabel: '$action $label',
-                style: GoogleFonts.outfit(
+                style: AppFonts.sans(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     decoration: TextDecoration.underline)),
@@ -857,7 +857,7 @@ class _ContactDialogState extends State<ContactDialog> {
               ),
               if (sent.devCode != null)
                 Text('Dev mode: your OTP is ${sent.devCode}',
-                    style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                    style: const TextStyle(fontSize: 12, color: AppTheme.muted)),
             ],
             if (_error != null) ...[
               const SizedBox(height: 10),
@@ -912,7 +912,7 @@ class _Verification extends StatelessWidget {
           done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
           color: done ? HomeColors.success : HomeColors.muted,
         ),
-        title: Text(title, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w500)),
+        title: Text(title, style: AppFonts.sans(fontSize: 16, fontWeight: FontWeight.w500)),
         subtitle: Text(subtitle),
         trailing: done || action == null
             ? null
@@ -933,11 +933,11 @@ class _Verification extends StatelessWidget {
         ]),
         const SizedBox(height: 22),
         Text('Verify your identity',
-            style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600)),
+            style: AppFonts.sans(fontSize: 18, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         Text(
           'A quick, one-time check that keeps Bleiben safe for hosts and guests.',
-          style: GoogleFonts.outfit(color: HomeColors.muted, fontSize: 15),
+          style: AppFonts.sans(color: HomeColors.muted, fontSize: 15),
         ),
         const SizedBox(height: 14),
         check(
@@ -1018,10 +1018,10 @@ class _TeamAndRoles extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Organisation',
-                      style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w500)),
-                  Text(m.orgName, style: GoogleFonts.outfit(fontSize: 16)),
+                      style: AppFonts.sans(fontSize: 17, fontWeight: FontWeight.w500)),
+                  Text(m.orgName, style: AppFonts.sans(fontSize: 16)),
                   Text('Your role: ${m.role.label}',
-                      style: GoogleFonts.outfit(color: HomeColors.muted, fontSize: 14)),
+                      style: AppFonts.sans(color: HomeColors.muted, fontSize: 14)),
                 ],
               ),
             ),
@@ -1031,7 +1031,7 @@ class _TeamAndRoles extends StatelessWidget {
                 style: TextButton.styleFrom(foregroundColor: AppTheme.ink),
                 child: Text('Edit',
                     semanticsLabel: 'Edit organisation name',
-                    style: GoogleFonts.outfit(
+                    style: AppFonts.sans(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         decoration: TextDecoration.underline)),
@@ -1041,7 +1041,7 @@ class _TeamAndRoles extends StatelessWidget {
         const SizedBox(height: 14),
         const Divider(height: 1),
         const SizedBox(height: 14),
-        Text('Roles', style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w500)),
+        Text('Roles', style: AppFonts.sans(fontSize: 17, fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 12,
@@ -1059,10 +1059,10 @@ class _TeamAndRoles extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(r.label,
-                        style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600)),
+                        style: AppFonts.sans(fontSize: 15, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
                     Text(r.description,
-                        style: GoogleFonts.outfit(fontSize: 13, color: HomeColors.muted)),
+                        style: AppFonts.sans(fontSize: 13, color: HomeColors.muted)),
                   ],
                 ),
               ),

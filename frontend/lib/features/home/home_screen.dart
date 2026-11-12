@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bleiben/core/theme/app_theme.dart';
 
 import '../../core/network/api_client.dart';
 import '../stays/add_property_wizard_screen.dart';
@@ -23,6 +24,7 @@ class HomeScreen extends StatefulWidget {
     this.signedIn = false,
     this.displayName,
     this.onAccountSettings,
+    this.onHostControlCenter,
     this.onLogout,
   });
 
@@ -39,6 +41,9 @@ class HomeScreen extends StatefulWidget {
 
   /// Signed in only: opens Account settings.
   final VoidCallback? onAccountSettings;
+
+  /// Signed in only: opens the Host Control Center (Properties first).
+  final VoidCallback? onHostControlCenter;
   final VoidCallback? onLogout;
 
   @override
@@ -127,9 +132,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (action == null || !mounted) return;
     if (widget.signedIn) {
       switch (action) {
-        case AccountAction.createListing ||
-              AccountAction.hostControl ||
-              AccountAction.listProperty:
+        case AccountAction.hostControl:
+          widget.onHostControlCenter == null
+              ? _openWizard()
+              : widget.onHostControlCenter!();
+        case AccountAction.createListing || AccountAction.listProperty:
           _openWizard();
         case AccountAction.accountSettings:
           widget.onAccountSettings?.call();
@@ -184,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.paper,
       endDrawer: HomeMobileMenu(
         onLink: _handleLink,
         onSignUp: _start,

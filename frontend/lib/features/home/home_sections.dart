@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:bleiben/core/theme/app_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -12,10 +12,10 @@ TextStyle _body(
         {double size = 15.5,
         Color color = HomeColors.muted,
         double height = 1.55}) =>
-    GoogleFonts.outfit(fontSize: size, color: color, height: height);
+    AppFonts.sans(fontSize: size, color: color, height: height);
 
 TextStyle _title({double size = 18, Color color = AppTheme.ink}) =>
-    GoogleFonts.outfit(
+    AppFonts.sans(
         fontSize: size, fontWeight: FontWeight.w600, color: color, height: 1.3);
 
 // ── 1. Hero ──────────────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ class HeroSection extends StatelessWidget {
               Flexible(
                 child: Text(
                   'Built for homestays, villas & holiday homes',
-                  style: GoogleFonts.outfit(
+                  style: AppFonts.sans(
                       fontSize: 13.5, fontWeight: FontWeight.w500),
                 ),
               ),
@@ -91,7 +91,7 @@ class HeroSection extends StatelessWidget {
               onPressed: onAllChannels,
               label:
                   Text('+${kSupportedChannels.length - kChannels.length} more'),
-              labelStyle: GoogleFonts.outfit(
+              labelStyle: AppFonts.sans(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.forest),
@@ -132,7 +132,7 @@ class HeroSection extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   minimumSize: Size.zero),
               child: Text('See pricing',
-                  style: GoogleFonts.outfit(
+                  style: AppFonts.sans(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.forest,
@@ -194,7 +194,7 @@ class _ChannelChip extends StatelessWidget {
           Icon(channel.icon, size: 16, color: channel.color),
           const SizedBox(width: 6),
           Text(channel.name,
-              style: GoogleFonts.outfit(
+              style: AppFonts.sans(
                   fontSize: 13, fontWeight: FontWeight.w500)),
         ],
       ),
@@ -391,7 +391,7 @@ class CalendarSection extends StatelessWidget {
           TextButton(
             onPressed: onExplore,
             child: Text('See the calendar live in a demo →',
-                style: GoogleFonts.outfit(
+                style: AppFonts.sans(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.forest)),
@@ -478,7 +478,7 @@ class BeforeAfterSection extends StatelessWidget {
                     width: 92,
                     child: Text(
                       value,
-                      style: GoogleFonts.fraunces(
+                      style: AppFonts.display(
                         fontSize: 26,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.forest,
@@ -564,7 +564,7 @@ class _Tag extends StatelessWidget {
       ),
       child: Text(
         label.toUpperCase(),
-        style: GoogleFonts.outfit(
+        style: AppFonts.sans(
           fontSize: 11.5,
           letterSpacing: 1.4,
           fontWeight: FontWeight.w600,
@@ -745,7 +745,7 @@ class _FeatureTabsSectionState extends State<FeatureTabsSection> {
               Chip(
                 label: Text(t),
                 labelStyle:
-                    GoogleFonts.outfit(fontSize: 13, color: AppTheme.forest),
+                    AppFonts.sans(fontSize: 13, color: AppTheme.forest),
                 backgroundColor: AppTheme.forest.withValues(alpha: 0.07),
                 side: BorderSide.none,
                 shape: const StadiumBorder(),
@@ -760,7 +760,7 @@ class _FeatureTabsSectionState extends State<FeatureTabsSection> {
           onPressed: () => widget.onLearnMore(tab.label),
           style: TextButton.styleFrom(padding: EdgeInsets.zero),
           child: Text('Learn more about ${tab.label.toLowerCase()} →',
-              style: GoogleFonts.outfit(
+              style: AppFonts.sans(
                   fontWeight: FontWeight.w600, color: AppTheme.forest)),
         ),
       ],
@@ -809,7 +809,7 @@ class _FeatureTabsSectionState extends State<FeatureTabsSection> {
                         Flexible(
                           child: Text(t,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.outfit(
+                              style: AppFonts.sans(
                                   color: Colors.white, fontSize: 14)),
                         ),
                       ],
@@ -850,7 +850,7 @@ class _FeatureTabsSectionState extends State<FeatureTabsSection> {
                   label: Text(_tabs[i].soon
                       ? '${_tabs[i].label} · soon'
                       : _tabs[i].label),
-                  labelStyle: GoogleFonts.outfit(
+                  labelStyle: AppFonts.sans(
                     fontWeight: FontWeight.w600,
                     color: i == _index ? Colors.white : AppTheme.ink,
                   ),
@@ -927,7 +927,7 @@ class ReachSection extends StatelessWidget {
               Expanded(child: Text(label, style: _title(size: 16))),
               Text(
                 '${(value * 100).round()}%',
-                style: GoogleFonts.fraunces(
+                style: AppFonts.display(
                     fontSize: 26, fontWeight: FontWeight.w600, color: color),
               ),
             ],
@@ -1096,7 +1096,7 @@ class _PlanCard extends StatelessWidget {
                   ),
                   child: Text(
                     '★ OUR SPECIALITY',
-                    style: GoogleFonts.outfit(
+                    style: AppFonts.sans(
                       fontSize: 11.5,
                       letterSpacing: 1.2,
                       fontWeight: FontWeight.w600,
@@ -1131,7 +1131,7 @@ class _PlanCard extends StatelessWidget {
                           children: [
                             Text(
                               value,
-                              style: GoogleFonts.fraunces(
+                              style: AppFonts.display(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w600,
                                 color: AppTheme.forest,
@@ -1247,7 +1247,7 @@ class _PricingSectionState extends State<PricingSection> {
               child: Text(
                 _listings == _maxListings ? '$_maxListings+' : '$_listings',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.fraunces(
+                style: AppFonts.display(
                     fontSize: 30, fontWeight: FontWeight.w600),
               ),
             ),
@@ -1271,7 +1271,7 @@ class _PricingSectionState extends State<PricingSection> {
                 onSelected: (_) => _setListings(p),
                 showCheckmark: false,
                 selectedColor: AppTheme.forest,
-                labelStyle: GoogleFonts.outfit(
+                labelStyle: AppFonts.sans(
                   fontWeight: FontWeight.w600,
                   color: _listings == p ? Colors.white : AppTheme.ink,
                 ),
@@ -1320,7 +1320,7 @@ class _PricingSectionState extends State<PricingSection> {
                   fit: BoxFit.scaleDown,
                   child: Text(
                     _money.format(total),
-                    style: GoogleFonts.fraunces(
+                    style: AppFonts.display(
                       fontSize: 46,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -1531,7 +1531,7 @@ class _StatTile extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             value,
-            style: GoogleFonts.fraunces(
+            style: AppFonts.display(
                 fontSize: 26,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.forest),
@@ -1697,7 +1697,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
                                   AppTheme.forest.withValues(alpha: 0.1),
                               child: Text(
                                 name[0],
-                                style: GoogleFonts.outfit(
+                                style: AppFonts.sans(
                                   color: AppTheme.forest,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -1830,30 +1830,47 @@ class BleibenWordmark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Smaller on phones so the nav buttons keep their room.
+    final compact = MediaQuery.sizeOf(context).width < 420;
+    final size = compact ? 20.0 : 25.0;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 34,
-          height: 34,
+          width: compact ? 30 : 36,
+          height: compact ? 30 : 36,
           decoration: BoxDecoration(
             color: dark ? Colors.white : AppTheme.forest,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(9),
           ),
           child: Icon(
-            Icons.cottage_rounded,
-            size: 20,
-            color: dark ? AppTheme.forest : Colors.white,
+            Icons.home_outlined,
+            size: compact ? 18 : 21,
+            color: dark ? AppTheme.forest : const Color(0xFFFFFEF7),
           ),
         ),
-        const SizedBox(width: 10),
-        Text(
-          'Bleiben',
-          style: GoogleFonts.fraunces(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            color: dark ? Colors.white : AppTheme.ink,
-          ),
+        SizedBox(width: compact ? 8 : 10),
+        Text.rich(
+          TextSpan(children: [
+            TextSpan(
+              text: 'bleiben',
+              style: AppFonts.display(
+                fontSize: size,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -size * 0.056,
+                color: dark ? Colors.white : AppTheme.ink,
+              ),
+            ),
+            TextSpan(
+              text: '.',
+              style: AppFonts.display(
+                fontSize: size,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.terra,
+              ),
+            ),
+          ]),
+          semanticsLabel: 'Bleiben',
         ),
       ],
     );

@@ -170,7 +170,7 @@ void main() {
     expect(find.text('Pending'), findsOneWidget);
     expect(
         find.textContaining(
-            'Use Homeyhuts Mobile App to complete profile verification'),
+            'Use the Bleiben mobile app to complete profile verification'),
         findsOneWidget);
     expect(find.textContaining('Scan the code with your phone camera'),
         findsOneWidget);

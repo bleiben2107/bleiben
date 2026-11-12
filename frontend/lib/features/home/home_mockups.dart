@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:bleiben/core/theme/app_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
 import 'home_widgets.dart';
@@ -36,7 +36,7 @@ String _compactPrice(int rupees) {
 TextStyle _tiny(
         {Color color = HomeColors.muted,
         FontWeight weight = FontWeight.w500}) =>
-    GoogleFonts.outfit(fontSize: 11.5, fontWeight: weight, color: color);
+    AppFonts.sans(fontSize: 11.5, fontWeight: weight, color: color);
 
 // ── Hero: channel sync board ─────────────────────────────────────────────────
 
@@ -91,7 +91,7 @@ class _ChannelSyncBoardState extends State<ChannelSyncBoard> {
                 Expanded(
                   child: Text(
                     'Seaside Cottage · 2 nights',
-                    style: GoogleFonts.outfit(
+                    style: AppFonts.sans(
                         fontWeight: FontWeight.w600, fontSize: 15),
                   ),
                 ),
@@ -156,7 +156,7 @@ class _ChannelSyncBoardState extends State<ChannelSyncBoard> {
                   child: Text(
                     channel.name,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.outfit(
+                    style: AppFonts.sans(
                         fontSize: 13, fontWeight: FontWeight.w500),
                   ),
                 ),
@@ -247,7 +247,7 @@ class _ChannelSyncBoardState extends State<ChannelSyncBoard> {
               ok
                   ? 'Synced with Bleiben — the other channels closed those nights instantly.'
                   : 'Double booking — two guests, same cottage, same nights.',
-              style: GoogleFonts.outfit(
+              style: AppFonts.sans(
                   fontSize: 13.5, color: color, fontWeight: FontWeight.w500),
             ),
           ),
@@ -280,7 +280,7 @@ class _SyncToggle extends StatelessWidget {
           ),
           child: Text(
             label,
-            style: GoogleFonts.outfit(
+            style: AppFonts.sans(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
               color: selected ? Colors.white : HomeColors.muted,
@@ -380,12 +380,12 @@ class _CalendarMockState extends State<CalendarMock> {
               children: [
                 Text(
                   'Calendar',
-                  style: GoogleFonts.outfit(
+                  style: AppFonts.sans(
                       fontSize: 18, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(width: 12),
                 Text('12 – 21 Oct',
-                    style: GoogleFonts.outfit(color: HomeColors.muted)),
+                    style: AppFonts.sans(color: HomeColors.muted)),
                 const Spacer(),
                 const _MiniChip('All properties', Icons.home_work_outlined),
                 const SizedBox(width: 8),
@@ -466,7 +466,7 @@ class _CalendarMockState extends State<CalendarMock> {
                   backgroundColor: AppTheme.forest.withValues(alpha: 0.1),
                   child: Text(
                     property.name[0],
-                    style: GoogleFonts.outfit(
+                    style: AppFonts.sans(
                       color: AppTheme.forest,
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
@@ -481,7 +481,7 @@ class _CalendarMockState extends State<CalendarMock> {
                       Text(
                         property.name,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                             fontSize: 13.5, fontWeight: FontWeight.w600),
                       ),
                       Text(property.place, style: _tiny()),
@@ -668,7 +668,7 @@ class PhoneCalendarMock extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text('Calendar',
-                    style: GoogleFonts.outfit(
+                    style: AppFonts.sans(
                         fontSize: 18, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 const Wrap(

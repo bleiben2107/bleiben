@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:bleiben/core/theme/app_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -71,7 +71,7 @@ class _TimeBlocks extends StatelessWidget {
           children: [
             Text(
               value.toString().padLeft(2, '0'),
-              style: GoogleFonts.outfit(
+              style: AppFonts.sans(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: dark ? Colors.white : AppTheme.ink,
@@ -80,7 +80,7 @@ class _TimeBlocks extends StatelessWidget {
             ),
             Text(
               unit,
-              style: GoogleFonts.outfit(
+              style: AppFonts.sans(
                 fontSize: 8.5,
                 letterSpacing: 0.6,
                 color: dark ? Colors.white60 : HomeColors.muted,
@@ -152,7 +152,7 @@ class OfferBar extends StatelessWidget {
                           if (medium) TextSpan(text: ' — ${offer.detail}'),
                         ],
                       ),
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontSize: 13.5, color: Colors.white),
                     ),
                     Countdown(
@@ -168,7 +168,7 @@ class OfferBar extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 6),
                         minimumSize: Size.zero,
-                        textStyle: GoogleFonts.outfit(
+                        textStyle: AppFonts.sans(
                             fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                       child: const Text('Claim offer'),
@@ -218,13 +218,13 @@ class OfferCard extends StatelessWidget {
             children: [
               Text(
                 offer.headline,
-                style: GoogleFonts.outfit(
+                style: AppFonts.sans(
                     fontWeight: FontWeight.w700, color: AppTheme.clay),
               ),
               Text(
                 'Save ${(offer.annualDiscount * 100).round()}% on annual plans',
                 style:
-                    GoogleFonts.outfit(fontSize: 12.5, color: HomeColors.muted),
+                    AppFonts.sans(fontSize: 12.5, color: HomeColors.muted),
               ),
             ],
           ),
@@ -236,7 +236,7 @@ class OfferCard extends StatelessWidget {
             onPressed: onSeePricing,
             child: Text(
               'See pricing →',
-              style: GoogleFonts.outfit(
+              style: AppFonts.sans(
                   fontWeight: FontWeight.w600, color: AppTheme.forest),
             ),
           ),
@@ -373,7 +373,7 @@ class _DemoDialogState extends State<_DemoDialog> {
               Expanded(
                 child: Text(
                   'Book a demo',
-                  style: GoogleFonts.fraunces(
+                  style: AppFonts.display(
                       fontSize: 26, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -386,7 +386,7 @@ class _DemoDialogState extends State<_DemoDialog> {
           ),
           Text(
             'A 30-minute walkthrough with our team, tailored to your properties.',
-            style: GoogleFonts.outfit(color: HomeColors.muted),
+            style: AppFonts.sans(color: HomeColors.muted),
           ),
           const SizedBox(height: 22),
           TextFormField(
@@ -423,7 +423,7 @@ class _DemoDialogState extends State<_DemoDialog> {
           ),
           const SizedBox(height: 18),
           Text('Preferred time (IST)',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+              style: AppFonts.sans(fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: _pickDate,
@@ -447,7 +447,7 @@ class _DemoDialogState extends State<_DemoDialog> {
                   selected: _slot == s,
                   onSelected: (_) => setState(() => _slot = s),
                   selectedColor: AppTheme.forest,
-                  labelStyle: GoogleFonts.outfit(
+                  labelStyle: AppFonts.sans(
                     color: _slot == s ? Colors.white : AppTheme.ink,
                     fontWeight: FontWeight.w600,
                   ),
@@ -459,7 +459,7 @@ class _DemoDialogState extends State<_DemoDialog> {
             const SizedBox(height: 8),
             Text(
               'Pick a date and a time slot',
-              style: GoogleFonts.outfit(
+              style: AppFonts.sans(
                   color: Theme.of(context).colorScheme.error, fontSize: 12.5),
             ),
           ],
@@ -483,14 +483,14 @@ class _DemoDialogState extends State<_DemoDialog> {
         Text(
           'Request received',
           style:
-              GoogleFonts.fraunces(fontSize: 26, fontWeight: FontWeight.w600),
+              AppFonts.display(fontSize: 26, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         Text(
           'Thanks, ${r.name.split(' ').first}. We will confirm your demo for '
           '${DateFormat('EEE, d MMM').format(r.date)} at ${r.slot} IST at ${r.contact}.',
           textAlign: TextAlign.center,
-          style: GoogleFonts.outfit(color: HomeColors.muted, height: 1.5),
+          style: AppFonts.sans(color: HomeColors.muted, height: 1.5),
         ),
         const SizedBox(height: 24),
         PillButton(label: 'Done', onPressed: () => Navigator.pop(context, r)),
@@ -521,7 +521,7 @@ Future<void> showChannelsDialog(BuildContext context) {
                   Expanded(
                     child: Text(
                       'Supported channels',
-                      style: GoogleFonts.fraunces(
+                      style: AppFonts.display(
                           fontSize: 24, fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -542,7 +542,7 @@ Future<void> showChannelsDialog(BuildContext context) {
                       avatar: const Icon(Icons.check_circle_rounded,
                           size: 16, color: HomeColors.success),
                       label: Text(c),
-                      labelStyle: GoogleFonts.outfit(fontSize: 13.5),
+                      labelStyle: AppFonts.sans(fontSize: 13.5),
                       backgroundColor: HomeColors.mist,
                       side: BorderSide.none,
                       shape: const StadiumBorder(),
@@ -553,7 +553,7 @@ Future<void> showChannelsDialog(BuildContext context) {
               Text(
                 'Availability can vary by region. We confirm your channels during onboarding.',
                 style:
-                    GoogleFonts.outfit(fontSize: 12.5, color: HomeColors.muted),
+                    AppFonts.sans(fontSize: 12.5, color: HomeColors.muted),
               ),
             ],
           ),
@@ -618,7 +618,7 @@ class FloatingActions extends StatelessWidget {
             onPressed: onDemo,
             icon: const Icon(Icons.video_call_outlined),
             label: Text('Book a demo',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                style: AppFonts.sans(fontWeight: FontWeight.w600)),
           ),
       ],
     );
@@ -699,7 +699,7 @@ class AccountSheet extends StatelessWidget {
                             ? displayName!
                             : 'Hey there!',
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                             fontSize: 15, fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -756,7 +756,7 @@ class _AccountRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   item.label,
-                  style: GoogleFonts.outfit(
+                  style: AppFonts.sans(
                     fontSize: 14.5,
                     fontWeight: emphasised ? FontWeight.w600 : FontWeight.w400,
                     color: AppTheme.ink,

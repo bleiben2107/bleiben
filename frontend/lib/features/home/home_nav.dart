@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:bleiben/core/theme/app_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
 import 'home_content.dart';
 import 'home_sections.dart' show BleibenWordmark;
 import 'home_widgets.dart';
 
-TextStyle _navText() => GoogleFonts.outfit(
+TextStyle _navText() => AppFonts.sans(
     fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.ink);
 
 /// Sticky top navigation with Product / Solutions / Resources menus.
@@ -128,7 +128,7 @@ class _HomeNavBarState extends State<HomeNavBar> {
                 Expanded(
                   child: Text(
                     'Works with Airbnb, Booking.com, Vrbo, Agoda, MakeMyTrip and more.',
-                    style: GoogleFonts.outfit(
+                    style: AppFonts.sans(
                         fontSize: 13, color: HomeColors.muted),
                   ),
                 ),
@@ -136,7 +136,7 @@ class _HomeNavBarState extends State<HomeNavBar> {
                   onPressed: () =>
                       _go(_product, const AnchorLink(HomeAnchor.features)),
                   child: Text('See all features →',
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontWeight: FontWeight.w600, color: AppTheme.forest)),
                 ),
               ],
@@ -203,7 +203,7 @@ class _HomeNavBarState extends State<HomeNavBar> {
   Widget build(BuildContext context) {
     final wide = HomeLayout.isWide(context);
     return Material(
-      color: Colors.white.withValues(alpha: 0.97),
+      color: AppTheme.paper.withValues(alpha: 0.97),
       child: Container(
         height: 72,
         padding: EdgeInsets.symmetric(horizontal: HomeLayout.gutter(context)),
@@ -297,7 +297,7 @@ class _MenuHeading extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
       child: Text(
         text.toUpperCase(),
-        style: GoogleFonts.outfit(
+        style: AppFonts.sans(
           fontSize: 11.5,
           letterSpacing: 1.3,
           fontWeight: FontWeight.w600,
@@ -335,7 +335,7 @@ class _MenuTile extends StatelessWidget {
                       Flexible(
                         child: Text(
                           entry.title,
-                          style: GoogleFonts.outfit(
+                          style: AppFonts.sans(
                               fontSize: 14.5, fontWeight: FontWeight.w600),
                         ),
                       ),
@@ -350,7 +350,7 @@ class _MenuTile extends StatelessWidget {
                           ),
                           child: Text(
                             entry.badge!,
-                            style: GoogleFonts.outfit(
+                            style: AppFonts.sans(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w600,
                                 color: AppTheme.clay),
@@ -361,7 +361,7 @@ class _MenuTile extends StatelessWidget {
                   ),
                   Text(
                     entry.subtitle,
-                    style: GoogleFonts.outfit(
+                    style: AppFonts.sans(
                         fontSize: 12.5, color: HomeColors.muted, height: 1.35),
                   ),
                 ],
@@ -404,7 +404,7 @@ class _PromoCard extends StatelessWidget {
             children: [
               Text(
                 eyebrow.toUpperCase(),
-                style: GoogleFonts.outfit(
+                style: AppFonts.sans(
                   fontSize: 11,
                   letterSpacing: 1.3,
                   fontWeight: FontWeight.w600,
@@ -414,7 +414,7 @@ class _PromoCard extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 title,
-                style: GoogleFonts.outfit(
+                style: AppFonts.sans(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
@@ -422,11 +422,11 @@ class _PromoCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(body,
-                  style: GoogleFonts.outfit(
+                  style: AppFonts.sans(
                       fontSize: 13, color: Colors.white70, height: 1.4)),
               const SizedBox(height: 16),
               Text(action,
-                  style: GoogleFonts.outfit(
+                  style: AppFonts.sans(
                       fontWeight: FontWeight.w600, color: Colors.white)),
             ],
           ),
@@ -467,7 +467,7 @@ class HomeMobileMenu extends StatelessWidget {
         collapsedShape: const Border(),
         title: Text(title,
             style:
-                GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w500)),
+                AppFonts.sans(fontSize: 17, fontWeight: FontWeight.w500)),
         children: [
           for (final e in entries) _MenuTile(e, onTap: () => go(e.link))
         ],
@@ -509,7 +509,7 @@ class HomeMobileMenu extends StatelessWidget {
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(label,
-                            style: GoogleFonts.outfit(
+                            style: AppFonts.sans(
                                 fontSize: 17, fontWeight: FontWeight.w500)),
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: () => go(AnchorLink(anchor)),
@@ -519,7 +519,7 @@ class HomeMobileMenu extends StatelessWidget {
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.person_outline_rounded),
                       title: Text(signedIn ? 'Account' : 'Log in or account',
-                          style: GoogleFonts.outfit(fontSize: 15)),
+                          style: AppFonts.sans(fontSize: 15)),
                       onTap: () {
                         Navigator.pop(context);
                         onAccount();
@@ -529,7 +529,7 @@ class HomeMobileMenu extends StatelessWidget {
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.video_call_outlined),
                       title: Text('Book a demo',
-                          style: GoogleFonts.outfit(fontSize: 15)),
+                          style: AppFonts.sans(fontSize: 15)),
                       onTap: () => go(const DemoLink()),
                     ),
                   ],
