@@ -6,6 +6,7 @@ import 'features/auth/auth_controller.dart';
 import 'features/auth/login_screen.dart';
 import 'features/account/account_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/host/host_control_center.dart';
 
 class BleibenApp extends StatelessWidget {
   const BleibenApp({super.key, required this.auth, required this.api});
@@ -46,6 +47,14 @@ class BleibenApp extends StatelessWidget {
                 );
               }
 
+              void openHostControlCenter() {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => HostControlCenterScreen(auth: auth, api: api),
+                  ),
+                );
+              }
+
               return HomeScreen(
                 api: api,
                 signedIn: signedIn,
@@ -53,6 +62,7 @@ class BleibenApp extends StatelessWidget {
                 onLogin: () => openAuth(register: false),
                 onSignUp: () => openAuth(register: true),
                 onAccountSettings: openAccountSettings,
+                onHostControlCenter: openHostControlCenter,
                 onLogout: auth.logout,
               );
             },

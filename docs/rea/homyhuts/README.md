@@ -17,6 +17,7 @@ time, so re-check a screen live before copying fine detail.
 | [03-auth-and-account.md](03-auth-and-account.md) | Sign up / log in (OTP), account settings, verification, payout details | Auth, profile, settings work (Rahul) |
 | [04-host-panel.md](04-host-panel.md) | Host Control Center: screens, access rules, co-hosts/roles, what each screen does, its APIs | Any host-side module (Aman: properties, calendar, reservations…) |
 | [06-property-listing-wizard.md](06-property-listing-wizard.md) | The full "list your property" flow, live: start-trial form, start page, all 19 steps with fields and options, AI assistant, publish | Property / unit setup (Aman), first-property onboarding |
+| [07-host-control-center-mvp.md](07-host-control-center-mvp.md) | **Host Control Center, module by module, following the Bleiben MVP plan**: plan scope, Homeyhuts reference (live + code), and the Bleiben R1 screens and APIs to build | Planning or building any host module |
 | [05-bleiben-mapping.md](05-bleiben-mapping.md) | How the homyhuts features map to Bleiben's PRD/MVP, and what is built | Planning a task / checking scope |
 | [raw/routes.txt](raw/routes.txt) | Every route in both apps, with access rules | Quick lookup |
 | [raw/endpoints-guest-portal.txt](raw/endpoints-guest-portal.txt) | 69 API calls made by homeyhuts.com | API naming / shapes |
