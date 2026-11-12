@@ -149,7 +149,7 @@ class _TeamPanelState extends State<TeamPanel> {
           _canManage
               ? 'Invite managers, staff or read-only members by email and choose what they can do.'
               : 'Only owners and managers can invite people or change roles.',
-          style: const TextStyle(color: Colors.black54, fontSize: 13),
+          style: const TextStyle(color: AppTheme.muted, fontSize: 13),
         ),
         const SizedBox(height: 12),
         for (final m in _members) _memberTile(m),

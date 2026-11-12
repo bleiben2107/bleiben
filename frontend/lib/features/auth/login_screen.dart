@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:bleiben/core/theme/app_fonts.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
 import 'auth_controller.dart';
@@ -157,12 +157,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        'Bleiben',
-                        style: GoogleFonts.fraunces(
-                            fontSize: 44,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.forest),
+                      Text.rich(
+                        TextSpan(children: [
+                          TextSpan(
+                            text: 'bleiben',
+                            style: AppFonts.display(
+                                fontSize: 44,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -2.4,
+                                color: AppTheme.ink),
+                          ),
+                          TextSpan(
+                            text: '.',
+                            style: AppFonts.display(
+                                fontSize: 44,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.terra),
+                          ),
+                        ]),
+                        semanticsLabel: 'Bleiben',
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 6),
@@ -182,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF8D7DA),
+                            color: AppTheme.dangerSoft,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
@@ -190,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             key: const Key('auth-error'),
                             textAlign: TextAlign.center,
                             style: const TextStyle(
-                                color: Color(0xFFA22029), fontSize: 13.5),
+                                color: AppTheme.danger, fontSize: 13.5),
                           ),
                         ),
                         if (auth.suggestedAction == 'login' &&
@@ -417,7 +430,7 @@ class _LoginScreenState extends State<LoginScreen> {
     ];
   }
 
-  TextStyle get _heading => GoogleFonts.outfit(
+  TextStyle get _heading => AppFonts.sans(
       fontSize: 22, fontWeight: FontWeight.w600, color: AppTheme.ink);
 
   Widget _primary(String label, VoidCallback onPressed) => ElevatedButton(

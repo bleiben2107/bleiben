@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:bleiben/core/theme/app_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
 
@@ -17,13 +17,18 @@ class HomeLayout {
 
 /// Neutral palette used alongside [AppTheme] on the marketing pages.
 class HomeColors {
+  /// Card surface (white on the paper page background).
   static const Color paper = Colors.white;
-  static const Color mist = Color(0xFFF3F6F4);
-  static const Color line = Color(0xFFE2E8E4);
-  static const Color muted = Color(0xFF5B6861);
-  static const Color night = Color(0xFF12201A);
-  static const Color danger = Color(0xFFD64545);
-  static const Color success = Color(0xFF2E8B57);
+
+  /// Soft sage tint for chips, inputs and highlighted rows.
+  static const Color mist = Color(0xFFEDF0E5);
+  static const Color line = Color(0xFFDFE3D8);
+  static const Color muted = Color(0xFF6A7369);
+
+  /// Dark sections (offer bar, CTA band): deep forest.
+  static const Color night = Color(0xFF173A2D);
+  static const Color danger = Color(0xFFC0503A);
+  static const Color success = Color(0xFF4E8A4F);
 }
 
 /// Full-width band with a centred, width-capped content column.
@@ -73,16 +78,16 @@ class Eyebrow extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 18, height: 2, color: color),
-        const SizedBox(width: 8),
+        Text('✳', style: AppFonts.sans(fontSize: 18, color: color, height: 1)),
+        const SizedBox(width: 10),
         Flexible(
           child: Text(
             text.toUpperCase(),
-            style: GoogleFonts.outfit(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.6,
-              color: color,
+            style: AppFonts.sans(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 1.4,
+              color: color == AppTheme.clay ? AppTheme.ink : color,
             ),
           ),
         ),
@@ -116,11 +121,10 @@ class AccentHeadline extends StatelessWidget {
   Widget build(BuildContext context) {
     final scale = HomeLayout.isMedium(context) ? 1.0 : 0.66;
     final fontSize = size * scale;
-    final base = GoogleFonts.outfit(
+    final base = AppFonts.display(
       fontSize: fontSize,
-      fontWeight: FontWeight.w600,
-      height: 1.12,
-      letterSpacing: -0.6,
+      fontWeight: FontWeight.w500,
+      height: 1.1,
       color: dark ? Colors.white : AppTheme.ink,
     );
     return Text.rich(
@@ -129,7 +133,7 @@ class AccentHeadline extends StatelessWidget {
           TextSpan(text: lead, style: base),
           TextSpan(
             text: accent,
-            style: GoogleFonts.fraunces(
+            style: AppFonts.display(
               fontSize: fontSize,
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.w500,
@@ -189,9 +193,9 @@ class SectionIntro extends StatelessWidget {
             Text(
               subtitle!,
               textAlign: align,
-              style: GoogleFonts.outfit(
-                fontSize: 17,
-                height: 1.55,
+              style: AppFonts.sans(
+                fontSize: 16.5,
+                height: 1.75,
                 color: dark ? Colors.white70 : HomeColors.muted,
               ),
             ),
@@ -229,9 +233,9 @@ class PillButton extends StatelessWidget {
       horizontal: dense ? 18 : 26,
       vertical: dense ? 12 : 18,
     );
-    final textStyle = GoogleFonts.outfit(
-      fontSize: dense ? 14 : 16,
-      fontWeight: FontWeight.w600,
+    final textStyle = AppFonts.sans(
+      fontSize: dense ? 14 : 15.5,
+      fontWeight: FontWeight.w500,
     );
     final child = Row(
       mainAxisSize: MainAxisSize.min,
@@ -243,7 +247,8 @@ class PillButton extends StatelessWidget {
         ],
       ],
     );
-    const shape = StadiumBorder();
+    final shape = RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.radiusButton));
     if (filled) {
       return FilledButton(
         onPressed: onPressed,
@@ -280,7 +285,7 @@ class SurfaceCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(24),
     this.color = HomeColors.paper,
-    this.radius = 22,
+    this.radius = AppTheme.radiusCard,
     this.borderColor = HomeColors.line,
     this.elevated = true,
   });
@@ -303,9 +308,9 @@ class SurfaceCard extends StatelessWidget {
         boxShadow: elevated
             ? [
                 BoxShadow(
-                  color: AppTheme.ink.withValues(alpha: 0.06),
-                  blurRadius: 30,
-                  offset: const Offset(0, 12),
+                  color: AppTheme.ink.withValues(alpha: 0.08),
+                  blurRadius: 38,
+                  offset: const Offset(0, 24),
                 ),
               ]
             : null,
@@ -351,7 +356,7 @@ class BulletLine extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.outfit(
+              style: AppFonts.sans(
                 fontSize: 15.5,
                 height: 1.45,
                 color: textColor,

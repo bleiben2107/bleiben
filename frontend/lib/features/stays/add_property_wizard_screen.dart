@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:bleiben/core/theme/app_theme.dart';
+import 'package:bleiben/core/theme/app_fonts.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/storage/session_store.dart';
 import '../home/home_content.dart';
 import '../home/home_overlays.dart';
+import '../home/home_sections.dart' show BleibenWordmark;
 import 'stay.dart';
 import 'stays_controller.dart';
 
@@ -29,7 +31,7 @@ class AddPropertyWizardScreen extends StatefulWidget {
 
 class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
   // Brand color from Figma designs
-  static const Color figmaCoral = Color(0xFFFF3B14);
+  static const Color figmaCoral = AppTheme.forest;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // THE 19 STEPS OF THE PROPERTY LISTING WIZARD (06-property-listing-wizard.md)
@@ -453,7 +455,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red.shade700),
+      SnackBar(content: Text(message), backgroundColor: AppTheme.danger),
     );
   }
 
@@ -474,27 +476,27 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
         title: Row(
           children: [
             const Icon(Icons.check_circle_rounded,
-                color: Colors.green, size: 28),
+                color: AppTheme.success, size: 28),
             const SizedBox(width: 10),
             Text('Listing Published!',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                style: AppFonts.sans(fontWeight: FontWeight.bold)),
           ],
         ),
         content: Text(
           'Your property "${stay.title}" has been published! Our team will reach out to connect your OTAs and sync calendars.',
-          style: GoogleFonts.outfit(
-              fontSize: 14.5, color: const Color(0xFF334155)),
+          style: AppFonts.sans(
+              fontSize: 14.5, color: AppTheme.inkSoft),
         ),
         actions: [
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: figmaCoral,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24)),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             onPressed: () {
@@ -502,7 +504,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
               Navigator.of(context).pop(stay);
             },
             child: Text('Go to Host Panel',
-                style: GoogleFonts.outfit(
+                style: AppFonts.sans(
                     color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
@@ -517,7 +519,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.paper,
       body: _buildCurrentStepWidget(),
     );
   }
@@ -588,17 +590,17 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                   children: [
                     Text.rich(
                       TextSpan(
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                           fontSize: 38,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.8,
-                          color: const Color(0xFF0F172A),
+                          color: AppTheme.ink,
                         ),
                         children: const [
-                          TextSpan(text: 'Setup your property on '),
+                          TextSpan(text: 'Set up your property on '),
                           TextSpan(
-                            text: 'Homeyhuts',
-                            style: TextStyle(color: figmaCoral),
+                            text: 'Bleiben',
+                            style: TextStyle(color: AppTheme.terra),
                           ),
                         ],
                       ),
@@ -608,12 +610,12 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 720),
                       child: Text(
-                        'Homeyhuts is a Property Management System (PMS) and Channel Manager that helps you manage your direct bookings, Airbnb, MakeMyTrip, Booking.com and other OTAs from one app.',
+                        'Bleiben brings your direct bookings, Airbnb, Booking.com and other channels together in one calm place.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                           fontSize: 15,
                           fontWeight: FontWeight.w400,
-                          color: const Color(0xFF475569),
+                          color: AppTheme.muted,
                           height: 1.5,
                         ),
                       ),
@@ -625,11 +627,11 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         'CHOOSE HOW TO ADD YOUR PROPERTY',
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.2,
-                          color: const Color(0xFF64748B),
+                          color: AppTheme.muted,
                         ),
                       ),
                     ),
@@ -666,9 +668,9 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: AppTheme.paper,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: AppTheme.border),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -692,7 +694,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                         backgroundColor: figmaCoral,
                         minimumSize: const Size(260, 52),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(9999),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusButton),
                         ),
                         elevation: 4,
                       ),
@@ -708,7 +710,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                             )
                           : Text(
                               _getStep0ButtonText(),
-                              style: GoogleFonts.outfit(
+                              style: AppFonts.sans(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
@@ -745,10 +747,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     Text(
                       'Select your property type',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                         fontSize: 34,
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F172A),
+                        color: AppTheme.ink,
                         letterSpacing: -0.6,
                       ),
                     ),
@@ -758,10 +760,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       child: Text(
                         'Choose one primary type that best describes your place to help guests find you faster.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                           fontSize: 15,
                           fontWeight: FontWeight.w400,
-                          color: const Color(0xFF64748B),
+                          color: AppTheme.muted,
                           height: 1.5,
                         ),
                       ),
@@ -801,20 +803,20 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                 duration: const Duration(milliseconds: 180),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? const Color(0xFFFFF8F6)
+                                      ? AppTheme.paper
                                       : Colors.white,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
                                     color: isSelected
                                         ? figmaCoral
-                                        : const Color(0xFFE2E8F0),
+                                        : AppTheme.border,
                                     width: isSelected ? 2 : 1,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
                                       color: isSelected
                                           ? figmaCoral.withOpacity(0.08)
-                                          : Colors.black.withOpacity(0.03),
+                                          : AppTheme.ink.withValues(alpha: 0.03),
                                       blurRadius: isSelected ? 12 : 6,
                                       offset: const Offset(0, 2),
                                     ),
@@ -828,20 +830,20 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                       size: 32,
                                       color: isSelected
                                           ? figmaCoral
-                                          : const Color(0xFF334155),
+                                          : AppTheme.inkSoft,
                                     ),
                                     const SizedBox(height: 12),
                                     Text(
                                       label,
                                       textAlign: TextAlign.center,
-                                      style: GoogleFonts.outfit(
+                                      style: AppFonts.sans(
                                         fontSize: 14,
                                         fontWeight: isSelected
                                             ? FontWeight.w700
                                             : FontWeight.w500,
                                         color: isSelected
                                             ? figmaCoral
-                                            : const Color(0xFF0F172A),
+                                            : AppTheme.ink,
                                       ),
                                     ),
                                   ],
@@ -883,10 +885,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     Text(
                       'Which of these best describes your place?',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                         fontSize: 34,
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F172A),
+                        color: AppTheme.ink,
                         letterSpacing: -0.6,
                       ),
                     ),
@@ -896,10 +898,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       child: Text(
                         'Choose the option that accurately defines guest privacy during their stay.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                           fontSize: 15,
                           fontWeight: FontWeight.w400,
-                          color: const Color(0xFF64748B),
+                          color: AppTheme.muted,
                           height: 1.5,
                         ),
                       ),
@@ -995,10 +997,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     Text(
                       'Are you the property owner or manager?',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                         fontSize: 34,
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F172A),
+                        color: AppTheme.ink,
                         letterSpacing: -0.6,
                       ),
                     ),
@@ -1008,10 +1010,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       child: Text(
                         'This helps us configure legal settlement ledgers, co-host permissions, and agreement documentation.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                           fontSize: 15,
                           fontWeight: FontWeight.w400,
-                          color: const Color(0xFF64748B),
+                          color: AppTheme.muted,
                         ),
                       ),
                     ),
@@ -1088,10 +1090,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                           child: Text(
                             'Add your property address',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
+                            style: AppFonts.sans(
                               fontSize: 34,
                               fontWeight: FontWeight.w800,
-                              color: const Color(0xFF0F172A),
+                              color: AppTheme.ink,
                               letterSpacing: -0.6,
                             ),
                           ),
@@ -1104,10 +1106,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       child: Text(
                         'Your address is only shared with guests after they’ve made a reservation.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                           fontSize: 15,
                           fontWeight: FontWeight.w400,
-                          color: const Color(0xFF64748B),
+                          color: AppTheme.muted,
                           height: 1.5,
                         ),
                       ),
@@ -1123,15 +1125,15 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                           height: mapHeight,
                           clipBehavior: Clip.antiAlias,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEBF5ED),
-                            borderRadius: BorderRadius.circular(24),
+                            color: AppTheme.successSoft,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusCard),
                             border: Border.all(
-                              color: const Color(0xFFE2E8F0),
+                              color: AppTheme.border,
                               width: 1.2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
+                                color: AppTheme.ink.withValues(alpha: 0.04),
                                 blurRadius: 18,
                                 offset: const Offset(0, 4),
                               ),
@@ -1157,7 +1159,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                         boxShadow: [
                                           BoxShadow(
                                             color:
-                                                Colors.black.withOpacity(0.12),
+                                                AppTheme.ink.withValues(alpha: 0.12),
                                             blurRadius: 8,
                                             offset: const Offset(0, 2),
                                           ),
@@ -1169,10 +1171,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                                 .isNotEmpty
                                             ? _locationController.text.trim()
                                             : 'Your place location',
-                                        style: GoogleFonts.outfit(
+                                        style: AppFonts.sans(
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF0F172A),
+                                          color: AppTheme.ink,
                                         ),
                                       ),
                                     ),
@@ -1180,13 +1182,13 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                     const Icon(
                                       Icons.location_on_rounded,
                                       size: 44,
-                                      color: Color(0xFFFF3800),
+                                      color: AppTheme.forest,
                                     ),
                                     Container(
                                       width: 22,
                                       height: 7,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFFF3800)
+                                        color: AppTheme.forest
                                             .withOpacity(0.28),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
@@ -1208,13 +1210,13 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                           horizontal: 16),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius: BorderRadius.circular(30),
+                                        borderRadius: BorderRadius.circular(AppTheme.radiusButton),
                                         border: Border.all(
-                                            color: const Color(0xFFE2E8F0)),
+                                            color: AppTheme.border),
                                         boxShadow: [
                                           BoxShadow(
                                             color:
-                                                Colors.black.withOpacity(0.08),
+                                                AppTheme.ink.withValues(alpha: 0.08),
                                             blurRadius: 14,
                                             offset: const Offset(0, 4),
                                           ),
@@ -1224,24 +1226,24 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                         children: [
                                           const Icon(
                                             Icons.location_on_rounded,
-                                            color: Color(0xFF334155),
+                                            color: AppTheme.inkSoft,
                                             size: 22,
                                           ),
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: TextField(
                                               controller: _locationController,
-                                              style: GoogleFonts.outfit(
+                                              style: AppFonts.sans(
                                                 fontSize: 15,
                                                 fontWeight: FontWeight.w600,
-                                                color: const Color(0xFF0F172A),
+                                                color: AppTheme.ink,
                                               ),
                                               decoration: InputDecoration(
                                                 border: InputBorder.none,
                                                 hintText: 'Enter Your Address',
-                                                hintStyle: GoogleFonts.outfit(
+                                                hintStyle: AppFonts.sans(
                                                   color:
-                                                      const Color(0xFF94A3B8),
+                                                      AppTheme.hint,
                                                   fontSize: 15,
                                                   fontWeight: FontWeight.w400,
                                                 ),
@@ -1277,9 +1279,9 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                       horizontal: 14, vertical: 8),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusCard),
                                     border: Border.all(
-                                        color: const Color(0xFFE2E8F0)),
+                                        color: AppTheme.border),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -1287,15 +1289,15 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                       const Icon(
                                         Icons.check_circle_rounded,
                                         size: 16,
-                                        color: Color(0xFF10B981),
+                                        color: AppTheme.success,
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
                                         'Pin placed accurately',
-                                        style: GoogleFonts.outfit(
+                                        style: AppFonts.sans(
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w600,
-                                          color: const Color(0xFF1E293B),
+                                          color: AppTheme.ink,
                                         ),
                                       ),
                                     ],
@@ -1341,7 +1343,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Add Property Photo',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            style: AppFonts.sans(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1393,7 +1395,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Add Property Document',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            style: AppFonts.sans(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1453,19 +1455,19 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     Text(
                       'Upload your property photos',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                         fontSize: 34,
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F172A),
+                        color: AppTheme.ink,
                       ),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       'High-quality photos increase booking conversions by up to 40%. At least 10 photos recommended.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                         fontSize: 15,
-                        color: const Color(0xFF64748B),
+                        color: AppTheme.muted,
                       ),
                     ),
                     const SizedBox(height: 36),
@@ -1475,10 +1477,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       child: Container(
                         height: 140,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: AppTheme.paper,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                              color: const Color(0xFFCBD5E1),
+                              color: AppTheme.borderStrong,
                               style: BorderStyle.solid),
                         ),
                         child: Center(
@@ -1490,16 +1492,16 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 'Click to add photos or paste image URL',
-                                style: GoogleFonts.outfit(
+                                style: AppFonts.sans(
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF0F172A),
+                                  color: AppTheme.ink,
                                 ),
                               ),
                               Text(
                                 'PNG, JPG, WebP up to 5MB each',
-                                style: GoogleFonts.outfit(
+                                style: AppFonts.sans(
                                     fontSize: 12,
-                                    color: const Color(0xFF64748B)),
+                                    color: AppTheme.muted),
                               ),
                             ],
                           ),
@@ -1511,15 +1513,15 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: AppTheme.paper,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: AppTheme.border),
                         ),
                         child: Center(
                           child: Text(
                             'No photos added yet. Tap above to add.',
-                            style: GoogleFonts.outfit(
-                                color: const Color(0xFF94A3B8)),
+                            style: AppFonts.sans(
+                                color: AppTheme.hint),
                           ),
                         ),
                       ),
@@ -1540,9 +1542,9 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                   errorBuilder: (_, __, ___) => Container(
                                     width: 140,
                                     height: 100,
-                                    color: Colors.grey.shade200,
+                                    color: AppTheme.border,
                                     child: const Icon(Icons.image,
-                                        color: Colors.grey),
+                                        color: AppTheme.muted),
                                   ),
                                 ),
                               ),
@@ -1556,7 +1558,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: const BoxDecoration(
-                                      color: Colors.black54,
+                                      color: AppTheme.muted,
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(Icons.close,
@@ -1598,17 +1600,17 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     Text(
                       'Property ownership documents',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontSize: 34,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A)),
+                          color: AppTheme.ink),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'Upload utility bills, tax receipts, or registration deed for trust verification.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                          fontSize: 15, color: const Color(0xFF64748B)),
+                      style: AppFonts.sans(
+                          fontSize: 15, color: AppTheme.muted),
                     ),
                     const SizedBox(height: 36),
                     InkWell(
@@ -1617,10 +1619,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       child: Container(
                         height: 120,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: AppTheme.paper,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                              color: const Color(0xFFCBD5E1),
+                              color: AppTheme.borderStrong,
                               style: BorderStyle.solid),
                         ),
                         child: Center(
@@ -1632,16 +1634,16 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 'Click to add property documents or deed',
-                                style: GoogleFonts.outfit(
+                                style: AppFonts.sans(
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF0F172A),
+                                  color: AppTheme.ink,
                                 ),
                               ),
                               Text(
                                 'PDF, JPG, PNG up to 10MB',
-                                style: GoogleFonts.outfit(
+                                style: AppFonts.sans(
                                     fontSize: 12,
-                                    color: const Color(0xFF64748B)),
+                                    color: AppTheme.muted),
                               ),
                             ],
                           ),
@@ -1653,15 +1655,15 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: AppTheme.paper,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: AppTheme.border),
                         ),
                         child: Center(
                           child: Text(
                             'No documents uploaded yet (optional for drafting)',
-                            style: GoogleFonts.outfit(
-                                color: const Color(0xFF94A3B8)),
+                            style: AppFonts.sans(
+                                color: AppTheme.hint),
                           ),
                         ),
                       ),
@@ -1670,9 +1672,9 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                         padding: const EdgeInsets.all(16),
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: AppTheme.paper,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: AppTheme.border),
                         ),
                         child: Row(
                           children: [
@@ -1681,12 +1683,12 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                             const SizedBox(width: 14),
                             Expanded(
                               child: Text(doc,
-                                  style: GoogleFonts.outfit(
+                                  style: AppFonts.sans(
                                       fontWeight: FontWeight.w600)),
                             ),
                             IconButton(
                               icon: const Icon(Icons.close,
-                                  size: 18, color: Colors.grey),
+                                  size: 18, color: AppTheme.muted),
                               onPressed: () =>
                                   setState(() => _documents.remove(doc)),
                             ),
@@ -1723,17 +1725,17 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     Text(
                       'How many guests can stay here?',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontSize: 34,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A)),
+                          color: AppTheme.ink),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'Ensure your property has sufficient bedding and amenities for this capacity.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                          fontSize: 15, color: const Color(0xFF64748B)),
+                      style: AppFonts.sans(
+                          fontSize: 15, color: AppTheme.muted),
                     ),
                     const SizedBox(height: 40),
                     _buildCounterRow('Guests allowed', _guests,
@@ -1792,17 +1794,17 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     Text(
                       'Tell guests what amenities you offer',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontSize: 34,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A)),
+                          color: AppTheme.ink),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'These are popular amenities guests search for when booking.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                          fontSize: 15, color: const Color(0xFF64748B)),
+                      style: AppFonts.sans(
+                          fontSize: 15, color: AppTheme.muted),
                     ),
                     const SizedBox(height: 36),
                     Wrap(
@@ -1869,16 +1871,16 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     Text(
                       'What makes your place unique?',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontSize: 34,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A)),
+                          color: AppTheme.ink),
                     ),
                     const SizedBox(height: 12),
                     Text('Choose up to 4 tags that best highlight your stay.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                            fontSize: 15, color: const Color(0xFF64748B))),
+                        style: AppFonts.sans(
+                            fontSize: 15, color: AppTheme.muted)),
                     const SizedBox(height: 36),
                     Wrap(
                       spacing: 12,
@@ -1887,10 +1889,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                         for (final tag in tags)
                           ChoiceChip(
                             label: Text(tag,
-                                style: GoogleFonts.outfit(
+                                style: AppFonts.sans(
                                     fontWeight: FontWeight.w600)),
                             selected: _selectedUniqueness.contains(tag),
-                            selectedColor: const Color(0xFFFFF1EE),
+                            selectedColor: AppTheme.sage,
                             onSelected: (selected) {
                               setState(() {
                                 if (selected &&
@@ -1945,17 +1947,17 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     Text(
                       'Experiences offered on-site',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontSize: 34,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A)),
+                          color: AppTheme.ink),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'Experiences must be hosted on-property or within a 5-minute walk.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                          fontSize: 15, color: const Color(0xFF64748B)),
+                      style: AppFonts.sans(
+                          fontSize: 15, color: AppTheme.muted),
                     ),
                     const SizedBox(height: 36),
                     Wrap(
@@ -1965,10 +1967,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                         for (final item in exp)
                           ChoiceChip(
                             label: Text(item,
-                                style: GoogleFonts.outfit(
+                                style: AppFonts.sans(
                                     fontWeight: FontWeight.w600)),
                             selected: _selectedExperiences.contains(item),
-                            selectedColor: const Color(0xFFFFF1EE),
+                            selectedColor: AppTheme.sage,
                             onSelected: (selected) {
                               setState(() {
                                 if (selected &&
@@ -2014,10 +2016,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       child: Text(
                         'Give your property a headline & story',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                             fontSize: 34,
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFF0F172A)),
+                            color: AppTheme.ink),
                       ),
                     ),
                     const SizedBox(height: 36),
@@ -2074,10 +2076,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       child: Text(
                         'Describe the neighbourhood',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                             fontSize: 34,
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFF0F172A)),
+                            color: AppTheme.ink),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -2085,8 +2087,8 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       child: Text(
                         'Share details about surroundings, security, nearby cafes, and local attractions.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                            fontSize: 15, color: const Color(0xFF64748B)),
+                        style: AppFonts.sans(
+                            fontSize: 15, color: AppTheme.muted),
                       ),
                     ),
                     const SizedBox(height: 36),
@@ -2127,32 +2129,32 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     Text(
                       'Now, set your base price per night',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontSize: 34,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A)),
+                          color: AppTheme.ink),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'You can adjust seasonal rates and weekend surcharges anytime in your calendar.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                          fontSize: 15, color: const Color(0xFF64748B)),
+                      style: AppFonts.sans(
+                          fontSize: 15, color: AppTheme.muted),
                     ),
                     const SizedBox(height: 48),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 32, vertical: 24),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        color: AppTheme.paper,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                        border: Border.all(color: AppTheme.border),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text('₹',
-                              style: GoogleFonts.outfit(
+                              style: AppFonts.sans(
                                   fontSize: 42,
                                   fontWeight: FontWeight.w800,
                                   color: figmaCoral)),
@@ -2162,10 +2164,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                             child: TextField(
                               controller: _priceController,
                               keyboardType: TextInputType.number,
-                              style: GoogleFonts.outfit(
+                              style: AppFonts.sans(
                                 fontSize: 42,
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFF0F172A),
+                                color: AppTheme.ink,
                               ),
                               decoration: const InputDecoration(
                                 border: InputBorder.none,
@@ -2174,9 +2176,9 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                             ),
                           ),
                           Text('/ night',
-                              style: GoogleFonts.outfit(
+                              style: AppFonts.sans(
                                   fontSize: 18,
-                                  color: const Color(0xFF64748B),
+                                  color: AppTheme.muted,
                                   fontWeight: FontWeight.w600)),
                         ],
                       ),
@@ -2211,17 +2213,17 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     Text(
                       'Check-in and check-out schedule',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontSize: 34,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A)),
+                          color: AppTheme.ink),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'Give yourself enough time between guest turnovers for cleaning and maintenance.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                          fontSize: 15, color: const Color(0xFF64748B)),
+                      style: AppFonts.sans(
+                          fontSize: 15, color: AppTheme.muted),
                     ),
                     const SizedBox(height: 48),
                     Row(
@@ -2287,10 +2289,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       child: Text(
                         'House rules & policies',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                             fontSize: 34,
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFF0F172A)),
+                            color: AppTheme.ink),
                       ),
                     ),
                     const SizedBox(height: 36),
@@ -2323,7 +2325,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                         ChoiceChip(
                           label: const Text('Flexible (Full refund 24h prior)'),
                           selected: _cancellationPolicy == 'flexible',
-                          selectedColor: const Color(0xFFFFF1EE),
+                          selectedColor: AppTheme.sage,
                           onSelected: (_) =>
                               setState(() => _cancellationPolicy = 'flexible'),
                         ),
@@ -2331,7 +2333,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                           label:
                               const Text('Moderate (Full refund 5 days prior)'),
                           selected: _cancellationPolicy == 'moderate',
-                          selectedColor: const Color(0xFFFFF1EE),
+                          selectedColor: AppTheme.sage,
                           onSelected: (_) =>
                               setState(() => _cancellationPolicy = 'moderate'),
                         ),
@@ -2369,10 +2371,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       child: Text(
                         'Check-in method & on-ground support',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                             fontSize: 34,
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFF0F172A)),
+                            color: AppTheme.ink),
                       ),
                     ),
                     const SizedBox(height: 36),
@@ -2384,21 +2386,21 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                           label:
                               const Text('Host or Caretaker greets in person'),
                           selected: _checkInMethod == 'host_greets',
-                          selectedColor: const Color(0xFFFFF1EE),
+                          selectedColor: AppTheme.sage,
                           onSelected: (_) =>
                               setState(() => _checkInMethod = 'host_greets'),
                         ),
                         ChoiceChip(
                           label: const Text('Keypad / Smart Lock'),
                           selected: _checkInMethod == 'keypad',
-                          selectedColor: const Color(0xFFFFF1EE),
+                          selectedColor: AppTheme.sage,
                           onSelected: (_) =>
                               setState(() => _checkInMethod = 'keypad'),
                         ),
                         ChoiceChip(
                           label: const Text('Building Staff / Security'),
                           selected: _checkInMethod == 'staff',
-                          selectedColor: const Color(0xFFFFF1EE),
+                          selectedColor: AppTheme.sage,
                           onSelected: (_) =>
                               setState(() => _checkInMethod = 'staff'),
                         ),
@@ -2446,11 +2448,11 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                    border: Border.all(color: AppTheme.border),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: AppTheme.ink.withValues(alpha: 0.04),
                         blurRadius: 18,
                         offset: const Offset(0, 4),
                       ),
@@ -2464,21 +2466,21 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
+                          color: AppTheme.sage,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.incomplete_circle_outlined,
-                                size: 14, color: Color(0xFF64748B)),
+                                size: 14, color: AppTheme.muted),
                             const SizedBox(width: 6),
                             Text(
                               'Pending',
-                              style: GoogleFonts.outfit(
+                              style: AppFonts.sans(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF334155),
+                                color: AppTheme.inkSoft,
                               ),
                             ),
                           ],
@@ -2489,21 +2491,21 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       // Title
                       Text(
                         'Verify your identity',
-                        style: GoogleFonts.outfit(
+                        style: AppFonts.sans(
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A),
+                          color: AppTheme.ink,
                         ),
                       ),
                       const SizedBox(height: 8),
 
                       // Subtitle
                       Text(
-                        'A quick, one-time check that keeps Homeyhuts safe for hosts and guests. It only takes about 1 minute.',
-                        style: GoogleFonts.outfit(
+                        'A quick, one-time check that keeps Bleiben safe for hosts and guests. It only takes about 1 minute.',
+                        style: AppFonts.sans(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w400,
-                          color: const Color(0xFF64748B),
+                          color: AppTheme.muted,
                           height: 1.45,
                         ),
                       ),
@@ -2513,9 +2515,9 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       Container(
                         padding: const EdgeInsets.all(22),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: AppTheme.paper,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: AppTheme.border),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2541,19 +2543,19 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Use Homeyhuts Mobile App to complete profile verification.',
-                                        style: GoogleFonts.outfit(
+                                        'Use the Bleiben mobile app to complete profile verification.',
+                                        style: AppFonts.sans(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF0F172A),
+                                          color: AppTheme.ink,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
                                         'To keep your ID private, we only collect it in our app. All you need is your ID card and a quick selfie.',
-                                        style: GoogleFonts.outfit(
+                                        style: AppFonts.sans(
                                           fontSize: 13.5,
-                                          color: const Color(0xFF64748B),
+                                          color: AppTheme.muted,
                                           height: 1.4,
                                         ),
                                       ),
@@ -2579,7 +2581,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                            color: const Color(0xFFCBD5E1)),
+                                            color: AppTheme.borderStrong),
                                       ),
                                       child: CustomPaint(
                                         painter: _FigmaQrPainter(),
@@ -2588,9 +2590,9 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                     const SizedBox(height: 8),
                                     Text(
                                       'Works on iPhone and Android',
-                                      style: GoogleFonts.outfit(
+                                      style: AppFonts.sans(
                                         fontSize: 11.5,
-                                        color: const Color(0xFF64748B),
+                                        color: AppTheme.muted,
                                       ),
                                     ),
                                   ],
@@ -2600,7 +2602,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     _buildVerifyStep('1',
-                                        'Scan the code with your phone camera to get the Homeyhuts app'),
+                                        'Scan the code with your phone camera to get the Bleiben app'),
                                     const SizedBox(height: 14),
                                     _buildVerifyStep('2',
                                         'Sign in with the same account you use here'),
@@ -2675,26 +2677,26 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                   children: [
                     Text(
                       'Preview your listing',
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontSize: 34,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A)),
+                          color: AppTheme.ink),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       'Here is how guests and OTAs will see your listing once published.',
-                      style: GoogleFonts.outfit(
-                          fontSize: 15, color: const Color(0xFF64748B)),
+                      style: AppFonts.sans(
+                          fontSize: 15, color: AppTheme.muted),
                     ),
                     const SizedBox(height: 36),
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                        border: Border.all(color: AppTheme.border),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
+                            color: AppTheme.ink.withValues(alpha: 0.06),
                             blurRadius: 18,
                             offset: const Offset(0, 4),
                           ),
@@ -2713,27 +2715,27 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                               errorBuilder: (_, __, ___) => Container(
                                 height: 260,
                                 width: double.infinity,
-                                color: const Color(0xFFF1F5F9),
+                                color: AppTheme.sage,
                                 child: const Icon(Icons.image,
-                                    size: 48, color: Color(0xFF94A3B8)),
+                                    size: 48, color: AppTheme.hint),
                               ),
                             )
                           else
                             Container(
                               height: 180,
                               width: double.infinity,
-                              color: const Color(0xFFF1F5F9),
+                              color: AppTheme.sage,
                               child: Center(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const Icon(Icons.photo_outlined,
-                                        size: 40, color: Color(0xFF94A3B8)),
+                                        size: 40, color: AppTheme.hint),
                                     const SizedBox(height: 8),
                                     Text(
                                       'No photos added yet',
-                                      style: GoogleFonts.outfit(
-                                          color: const Color(0xFF94A3B8),
+                                      style: AppFonts.sans(
+                                          color: AppTheme.hint,
                                           fontSize: 13),
                                     ),
                                   ],
@@ -2751,13 +2753,13 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                   children: [
                                     Text(
                                       '${stay.propertyType} • ${stay.accommodationType == 'entireHouse' ? 'Entire Place' : 'Private Room'}',
-                                      style: GoogleFonts.outfit(
+                                      style: AppFonts.sans(
                                           fontSize: 13,
                                           fontWeight: FontWeight.bold,
                                           color: figmaCoral),
                                     ),
                                     Text('★ New (0 reviews)',
-                                        style: GoogleFonts.outfit(
+                                        style: AppFonts.sans(
                                             fontSize: 13,
                                             fontWeight: FontWeight.bold)),
                                   ],
@@ -2767,27 +2769,27 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                   stay.title.isNotEmpty
                                       ? stay.title
                                       : 'Untitled Listing',
-                                  style: GoogleFonts.outfit(
+                                  style: AppFonts.sans(
                                       fontSize: 22,
                                       fontWeight: FontWeight.w800,
-                                      color: const Color(0xFF0F172A)),
+                                      color: AppTheme.ink),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
                                   stay.location.isNotEmpty
                                       ? '📍 ${stay.location}'
                                       : '📍 Location not specified',
-                                  style: GoogleFonts.outfit(
+                                  style: AppFonts.sans(
                                       fontSize: 14,
-                                      color: const Color(0xFF64748B)),
+                                      color: AppTheme.muted),
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
                                   '${stay.guests} guests • ${stay.bedrooms} bedrooms • ${stay.beds} beds • ${stay.bathrooms} baths',
-                                  style: GoogleFonts.outfit(
+                                  style: AppFonts.sans(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF334155)),
+                                      color: AppTheme.inkSoft),
                                 ),
                                 const Divider(height: 32),
                                 Row(
@@ -2800,28 +2802,28 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                       children: [
                                         Text(
                                             '₹${stay.basePrice.toStringAsFixed(0)}',
-                                            style: GoogleFonts.outfit(
+                                            style: AppFonts.sans(
                                                 fontSize: 24,
                                                 fontWeight: FontWeight.w800,
                                                 color:
-                                                    const Color(0xFF0F172A))),
+                                                    AppTheme.ink)),
                                         Text('per night (excl. taxes)',
-                                            style: GoogleFonts.outfit(
+                                            style: AppFonts.sans(
                                                 fontSize: 12,
                                                 color:
-                                                    const Color(0xFF64748B))),
+                                                    AppTheme.muted)),
                                       ],
                                     ),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16, vertical: 8),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFEBF5ED),
+                                        color: AppTheme.successSoft,
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: const Text('Ready to Activate',
                                           style: TextStyle(
-                                              color: Colors.green,
+                                              color: AppTheme.success,
                                               fontWeight: FontWeight.bold)),
                                     ),
                                   ],
@@ -2863,39 +2865,39 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       width: 72,
                       height: 72,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFEBF5ED),
+                        color: AppTheme.successSoft,
                         shape: BoxShape.circle,
                       ),
                       child: const Center(
                         child: Icon(Icons.rocket_launch_rounded,
-                            size: 38, color: Colors.green),
+                            size: 38, color: AppTheme.success),
                       ),
                     ),
                     const SizedBox(height: 20),
                     Text(
                       "You're almost done!",
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontSize: 34,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0F172A)),
+                          color: AppTheme.ink),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'Your listing is complete. Publish now to start receiving direct bookings and sync your OTAs.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontSize: 15,
-                          color: const Color(0xFF64748B),
+                          color: AppTheme.muted,
                           height: 1.5),
                     ),
                     const SizedBox(height: 40),
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        color: AppTheme.paper,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                        border: Border.all(color: AppTheme.border),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2907,18 +2909,18 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text('Book a Quick Setup Call (Free)',
-                                    style: GoogleFonts.outfit(
+                                    style: AppFonts.sans(
                                         fontSize: 17,
                                         fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF0F172A))),
+                                        color: AppTheme.ink)),
                               ),
                             ],
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'Our hospitality onboarding specialist will connect your Airbnb, Booking.com, and MMT accounts in a 1-on-1 session to eliminate double bookings.',
-                            style: GoogleFonts.outfit(
-                                fontSize: 13.5, color: const Color(0xFF64748B)),
+                            style: AppFonts.sans(
+                                fontSize: 13.5, color: AppTheme.muted),
                           ),
                           const SizedBox(height: 16),
                           OutlinedButton(
@@ -2931,7 +2933,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(color: figmaCoral),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20)),
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
                             ),
                             child: const Text(
                                 'Schedule Call via WhatsApp / Google Meet',
@@ -2949,7 +2951,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                         backgroundColor: figmaCoral,
                         minimumSize: const Size(280, 54),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30)),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
                         elevation: 6,
                       ),
                       child: _isSaving
@@ -2959,7 +2961,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                               child: CircularProgressIndicator(
                                   color: Colors.white, strokeWidth: 2))
                           : Text('Publish Listing Now',
-                              style: GoogleFonts.outfit(
+                              style: AppFonts.sans(
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white)),
@@ -2987,13 +2989,13 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
           width: 22,
           height: 22,
           decoration: const BoxDecoration(
-            color: Color(0xFFFFF1EE),
+            color: AppTheme.sage,
             shape: BoxShape.circle,
           ),
           child: Center(
             child: Text(
               number,
-              style: GoogleFonts.outfit(
+              style: AppFonts.sans(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: figmaCoral,
@@ -3005,10 +3007,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
         Expanded(
           child: Text(
             text,
-            style: GoogleFonts.outfit(
+            style: AppFonts.sans(
               fontSize: 13.5,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF334155),
+              color: AppTheme.inkSoft,
               height: 1.35,
             ),
           ),
@@ -3022,7 +3024,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.black,
+        color: AppTheme.ink,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -3033,7 +3035,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
           const SizedBox(width: 6),
           Text(
             isApple ? 'App Store' : 'Google Play',
-            style: GoogleFonts.outfit(
+            style: AppFonts.sans(
               color: Colors.white,
               fontSize: 11.5,
               fontWeight: FontWeight.bold,
@@ -3057,10 +3059,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFFF8F6) : Colors.white,
+          color: isSelected ? AppTheme.paper : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? figmaCoral : const Color(0xFFE2E8F0),
+            color: isSelected ? figmaCoral : AppTheme.border,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -3069,18 +3071,18 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
           children: [
             Icon(icon,
                 size: 32,
-                color: isSelected ? figmaCoral : const Color(0xFF334155)),
+                color: isSelected ? figmaCoral : AppTheme.inkSoft),
             const SizedBox(height: 18),
             Text(title,
-                style: GoogleFonts.outfit(
+                style: AppFonts.sans(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A))),
+                    color: AppTheme.ink)),
             const SizedBox(height: 8),
             Text(subtitle,
-                style: GoogleFonts.outfit(
+                style: AppFonts.sans(
                     fontSize: 13.5,
-                    color: const Color(0xFF64748B),
+                    color: AppTheme.muted,
                     height: 1.4)),
           ],
         ),
@@ -3095,10 +3097,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.outfit(
+          style: AppFonts.sans(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF0F172A)),
+              color: AppTheme.ink),
         ),
         Row(
           children: [
@@ -3110,7 +3112,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
               width: 36,
               child: Text('$value',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
+                  style: AppFonts.sans(
                       fontSize: 18, fontWeight: FontWeight.bold)),
             ),
             IconButton(
@@ -3131,10 +3133,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       child: SwitchListTile(
         contentPadding: EdgeInsets.zero,
         title: Text(title,
-            style: GoogleFonts.outfit(
+            style: AppFonts.sans(
                 fontSize: 15.5,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF0F172A))),
+                color: AppTheme.ink)),
         value: value,
         activeColor: figmaCoral,
         onChanged: onChanged,
@@ -3150,10 +3152,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFFF1EE) : Colors.white,
+          color: isSelected ? AppTheme.sage : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-              color: isSelected ? figmaCoral : const Color(0xFFCBD5E1),
+              color: isSelected ? figmaCoral : AppTheme.borderStrong,
               width: isSelected ? 1.8 : 1),
         ),
         child: Row(
@@ -3161,13 +3163,13 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
           children: [
             Icon(icon,
                 size: 20,
-                color: isSelected ? figmaCoral : const Color(0xFF334155)),
+                color: isSelected ? figmaCoral : AppTheme.inkSoft),
             const SizedBox(width: 8),
             Text(label,
-                style: GoogleFonts.outfit(
+                style: AppFonts.sans(
                     fontSize: 14,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? figmaCoral : const Color(0xFF0F172A))),
+                    color: isSelected ? figmaCoral : AppTheme.ink)),
           ],
         ),
       ),
@@ -3190,17 +3192,17 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
         constraints: const BoxConstraints(minHeight: 214),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFFF8F6) : Colors.white,
+          color: isSelected ? AppTheme.paper : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? figmaCoral : const Color(0xFFE5E7EB),
+            color: isSelected ? figmaCoral : AppTheme.border,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
                   ? figmaCoral.withOpacity(0.08)
-                  : Colors.black.withOpacity(0.03),
+                  : AppTheme.ink.withValues(alpha: 0.03),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -3218,12 +3220,12 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? figmaCoral.withOpacity(0.12)
-                        : const Color(0xFFF8FAFC),
+                        : AppTheme.paper,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(icon,
                       size: 26,
-                      color: isSelected ? figmaCoral : const Color(0xFF1E293B)),
+                      color: isSelected ? figmaCoral : AppTheme.ink),
                 ),
                 Container(
                   width: 22,
@@ -3231,7 +3233,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? figmaCoral : const Color(0xFFCBD5E1),
+                      color: isSelected ? figmaCoral : AppTheme.borderStrong,
                       width: isSelected ? 6 : 1.5,
                     ),
                     color: Colors.white,
@@ -3242,18 +3244,18 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
             const SizedBox(height: 24),
             Text(
               title,
-              style: GoogleFonts.outfit(
+              style: AppFonts.sans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: isSelected ? figmaCoral : const Color(0xFF0F172A),
+                color: isSelected ? figmaCoral : AppTheme.ink,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: GoogleFonts.outfit(
+              style: AppFonts.sans(
                 fontSize: 13.5,
-                color: const Color(0xFF64748B),
+                color: AppTheme.muted,
                 height: 1.45,
               ),
             ),
@@ -3274,14 +3276,14 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
           if (parts.length > 1) _stateController.text = parts[1].trim();
         });
       },
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppTheme.radiusCard),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFFF1EE) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          color: isSelected ? AppTheme.sage : Colors.white,
+          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
           border: Border.all(
-            color: isSelected ? figmaCoral : const Color(0xFFE2E8F0),
+            color: isSelected ? figmaCoral : AppTheme.border,
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
@@ -3291,15 +3293,15 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
             Icon(
               Icons.location_on_outlined,
               size: 15,
-              color: isSelected ? figmaCoral : const Color(0xFF64748B),
+              color: isSelected ? figmaCoral : AppTheme.muted,
             ),
             const SizedBox(width: 6),
             Text(
               location,
-              style: GoogleFonts.outfit(
+              style: AppFonts.sans(
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? figmaCoral : const Color(0xFF334155),
+                color: isSelected ? figmaCoral : AppTheme.inkSoft,
               ),
             ),
           ],
@@ -3314,35 +3316,12 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 32),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+        border: Border(bottom: BorderSide(color: AppTheme.sage)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: figmaCoral,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.home_rounded,
-                    color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'homeyhuts',
-                style: GoogleFonts.outfit(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: figmaCoral,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ],
-          ),
+          const BleibenWordmark(),
           Row(
             children: [
               OutlinedButton(
@@ -3363,12 +3342,12 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                   side: const BorderSide(color: figmaCoral, width: 1.5),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(9999),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusButton),
                   ),
                 ),
                 child: Text(
                   _isSaving ? 'Saving...' : 'Save as Draft',
-                  style: GoogleFonts.outfit(
+                  style: AppFonts.sans(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: figmaCoral,
@@ -3387,20 +3366,20 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     Navigator.of(context).pop();
                   }
                 },
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(AppTheme.radiusCard),
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(5, 4, 12, 4),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                    border: Border.all(color: AppTheme.border),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       CircleAvatar(
                         radius: 14,
-                        backgroundColor: Color(0xFF222222),
+                        backgroundColor: AppTheme.ink,
                         child: Text(
                           'A',
                           style: TextStyle(
@@ -3414,7 +3393,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       Icon(
                         Icons.menu_rounded,
                         size: 20,
-                        color: Color(0xFF1E293B),
+                        color: AppTheme.ink,
                       ),
                     ],
                   ),
@@ -3434,14 +3413,14 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+        border: Border(top: BorderSide(color: AppTheme.sage)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           LinearProgressIndicator(
             value: progress.clamp(0.0, 1.0),
-            backgroundColor: const Color(0xFFE2E8F0),
+            backgroundColor: AppTheme.border,
             valueColor: const AlwaysStoppedAnimation(figmaCoral),
             minHeight: 4,
           ),
@@ -3455,17 +3434,17 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                   TextButton(
                     onPressed: _back,
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF334155),
+                      foregroundColor: AppTheme.inkSoft,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 10),
                     ),
                     child: Text(
                       backLabel,
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         decoration: TextDecoration.underline,
-                        color: const Color(0xFF334155),
+                        color: AppTheme.inkSoft,
                       ),
                     ),
                   ),
@@ -3479,7 +3458,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 36, vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(9999),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusButton),
                       ),
                     ),
                     child: _isSaving
@@ -3495,7 +3474,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                             _currentStep == _totalSteps - 1
                                 ? 'Publish'
                                 : 'Next',
-                            style: GoogleFonts.outfit(
+                            style: AppFonts.sans(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
                             ),
@@ -3516,10 +3495,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: GoogleFonts.outfit(
+        style: AppFonts.sans(
           fontSize: 14,
           fontWeight: FontWeight.w600,
-          color: const Color(0xFF0F172A),
+          color: AppTheme.ink,
         ),
       ),
     );
@@ -3530,17 +3509,17 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       hintText: hint,
       prefixText: prefixText,
       hintStyle:
-          GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 14),
+          AppFonts.sans(color: AppTheme.hint, fontSize: 14),
       filled: true,
-      fillColor: const Color(0xFFF8FAFC),
+      fillColor: AppTheme.paper,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        borderSide: const BorderSide(color: AppTheme.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        borderSide: const BorderSide(color: AppTheme.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -3556,50 +3535,27 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 32),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+        border: Border(bottom: BorderSide(color: AppTheme.sage)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: figmaCoral,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.home_rounded,
-                    color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'homeyhuts',
-                style: GoogleFonts.outfit(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: figmaCoral,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ],
-          ),
+          const BleibenWordmark(),
           OutlinedButton(
             onPressed: () => Navigator.of(context).pop(),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              side: const BorderSide(color: Color(0xFFCBD5E1)),
+              side: const BorderSide(color: AppTheme.borderStrong),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(9999),
+                borderRadius: BorderRadius.circular(AppTheme.radiusButton),
               ),
             ),
             child: Text(
               'Exit to home',
-              style: GoogleFonts.outfit(
+              style: AppFonts.sans(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF334155),
+                color: AppTheme.inkSoft,
               ),
             ),
           ),
@@ -3621,9 +3577,9 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
+            color: AppTheme.paper,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            border: Border.all(color: AppTheme.border),
           ),
           child: isDesktop
               ? Row(
@@ -3634,7 +3590,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                         Container(
                           width: 40,
                           height: 1,
-                          color: const Color(0xFFCBD5E1),
+                          color: AppTheme.borderStrong,
                         ),
                       _buildProgressStepItem(
                           steps[i].$1, steps[i].$2, steps[i].$3),
@@ -3665,7 +3621,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
           height: 24,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isActive ? figmaCoral : const Color(0xFFE2E8F0),
+            color: isActive ? figmaCoral : AppTheme.border,
           ),
           child: Center(
             child: Text(
@@ -3673,7 +3629,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: isActive ? Colors.white : const Color(0xFF64748B),
+                color: isActive ? Colors.white : AppTheme.muted,
               ),
             ),
           ),
@@ -3681,10 +3637,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
         const SizedBox(width: 8),
         Text(
           label,
-          style: GoogleFonts.outfit(
+          style: AppFonts.sans(
             fontSize: 13,
             fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-            color: isActive ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+            color: isActive ? AppTheme.ink : AppTheme.muted,
           ),
         ),
       ],
@@ -3699,7 +3655,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
           'Fastest setup. Connect your Airbnb account to import all photos, titles, and property details automatically.',
       icon: Icons.sync_rounded,
       badge: 'Fastest',
-      iconBgColor: const Color(0xFFFFECE8),
+      iconBgColor: AppTheme.sage,
       iconColor: figmaCoral,
     );
   }
@@ -3711,20 +3667,20 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
       description:
           'Build your listing step by step. Add property photos, custom amenities, pricing rules, and location manually.',
       icon: Icons.edit_note_rounded,
-      iconBgColor: const Color(0xFFF1F5F9),
-      iconColor: const Color(0xFF0F172A),
+      iconBgColor: AppTheme.sage,
+      iconColor: AppTheme.ink,
     );
   }
 
   Widget _buildCardClone() {
     return _buildMethodCard(
       method: 'clone',
-      title: 'Clone Homeyhuts Property',
+      title: 'Clone a Bleiben property',
       description:
           'Duplicate an existing property listing and adjust details for a new villa, cottage, or room.',
       icon: Icons.copy_rounded,
-      iconBgColor: const Color(0xFFF1F5F9),
-      iconColor: const Color(0xFF0F172A),
+      iconBgColor: AppTheme.sage,
+      iconColor: AppTheme.ink,
     );
   }
 
@@ -3746,10 +3702,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
         constraints: const BoxConstraints(minHeight: 200),
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFFF8F6) : Colors.white,
+          color: isSelected ? AppTheme.paper : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? figmaCoral : const Color(0xFFE2E8F0),
+            color: isSelected ? figmaCoral : AppTheme.border,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -3773,12 +3729,12 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCFCE7),
+                      color: AppTheme.successSoft,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(badge,
                         style: const TextStyle(
-                            color: Color(0xFF15803D),
+                            color: AppTheme.success,
                             fontSize: 11,
                             fontWeight: FontWeight.bold)),
                   ),
@@ -3786,15 +3742,15 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
             ),
             const SizedBox(height: 18),
             Text(title,
-                style: GoogleFonts.outfit(
+                style: AppFonts.sans(
                     fontSize: 16.5,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A))),
+                    color: AppTheme.ink)),
             const SizedBox(height: 8),
             Text(description,
-                style: GoogleFonts.outfit(
+                style: AppFonts.sans(
                     fontSize: 13,
-                    color: const Color(0xFF64748B),
+                    color: AppTheme.muted,
                     height: 1.45)),
           ],
         ),
@@ -3816,10 +3772,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
 class _FigmaMapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final bgPaint = Paint()..color = const Color(0xFFEBF5ED);
+    final bgPaint = Paint()..color = AppTheme.successSoft;
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
 
-    final dotPaint = Paint()..color = const Color(0xFFCCE4CF);
+    final dotPaint = Paint()..color = AppTheme.successSoft;
     const spacing = 26.0;
     for (double x = 12; x < size.width; x += spacing) {
       for (double y = 12; y < size.height; y += spacing) {
@@ -3904,7 +3860,7 @@ class _FigmaMapPainter extends CustomPainter {
       text: TextSpan(
         text: text,
         style: const TextStyle(
-            color: Color(0xFF1E293B),
+            color: AppTheme.ink,
             fontSize: 10.5,
             fontWeight: FontWeight.w800),
       ),
@@ -3920,7 +3876,7 @@ class _FigmaMapPainter extends CustomPainter {
       text: TextSpan(
         text: text,
         style: TextStyle(
-          color: const Color(0xFF334155),
+          color: AppTheme.inkSoft,
           fontSize: 11,
           fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
           height: 1.2,
@@ -3943,7 +3899,7 @@ class _FigmaMapPainter extends CustomPainter {
 class _FigmaQrPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final p = Paint()..color = const Color(0xFF0F172A);
+    final p = Paint()..color = AppTheme.ink;
 
     // Corner Finder Patterns (Top-Left, Top-Right, Bottom-Left)
     _drawFinder(canvas, const Offset(6, 6), p);

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:bleiben/core/theme/app_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
 import 'home_content.dart';
@@ -8,10 +8,10 @@ import 'home_sections.dart' show BleibenWordmark;
 import 'home_widgets.dart';
 
 TextStyle _body({double size = 15.5, Color color = HomeColors.muted}) =>
-    GoogleFonts.outfit(fontSize: size, color: color, height: 1.55);
+    AppFonts.sans(fontSize: size, color: color, height: 1.55);
 
 TextStyle _title({double size = 18, Color color = AppTheme.ink}) =>
-    GoogleFonts.outfit(
+    AppFonts.sans(
         fontSize: size, fontWeight: FontWeight.w600, color: color, height: 1.3);
 
 // ── Everything you need ──────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ class EverythingSection extends StatelessWidget {
                 Icon(icon, size: 16, color: AppTheme.clay),
                 const SizedBox(width: 6),
                 Text(label,
-                    style: GoogleFonts.outfit(
+                    style: AppFonts.sans(
                         fontSize: 13, fontWeight: FontWeight.w500)),
               ],
             ),
@@ -86,7 +86,7 @@ class EverythingSection extends StatelessWidget {
             children: [
               Text(
                 '₹68K',
-                style: GoogleFonts.fraunces(
+                style: AppFonts.display(
                     fontSize: 30,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.forest),
@@ -100,7 +100,7 @@ class EverythingSection extends StatelessWidget {
                 ),
                 child: Text(
                   '↑ 18%',
-                  style: GoogleFonts.outfit(
+                  style: AppFonts.sans(
                       fontSize: 12.5,
                       color: HomeColors.success,
                       fontWeight: FontWeight.w600),
@@ -460,7 +460,7 @@ class _FaqSectionState extends State<FaqSection> {
                 _showAll
                     ? 'Show fewer questions'
                     : 'Show all ${kFaqs.length} questions',
-                style: GoogleFonts.outfit(
+                style: AppFonts.sans(
                     fontWeight: FontWeight.w600, color: AppTheme.forest),
               ),
             ),
@@ -516,7 +516,7 @@ class GuidesSection extends StatelessWidget {
                 onPressed: () => onOpen('The host handbook'),
                 child: Text(
                   'Explore the handbook →',
-                  style: GoogleFonts.outfit(
+                  style: AppFonts.sans(
                       fontWeight: FontWeight.w600,
                       color: AppTheme.forest,
                       fontSize: 15),
@@ -552,7 +552,7 @@ class GuidesSection extends StatelessWidget {
                                 const SizedBox(width: 10),
                                 Text(
                                   tag.toUpperCase(),
-                                  style: GoogleFonts.outfit(
+                                  style: AppFonts.sans(
                                     fontSize: 11.5,
                                     letterSpacing: 1.2,
                                     fontWeight: FontWeight.w600,
@@ -568,7 +568,7 @@ class GuidesSection extends StatelessWidget {
                                   overflow: TextOverflow.fade),
                             ),
                             Text('Read guide →',
-                                style: GoogleFonts.outfit(
+                                style: AppFonts.sans(
                                     fontWeight: FontWeight.w600,
                                     color: AppTheme.forest)),
                           ],
@@ -640,7 +640,7 @@ class HomeFooter extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(heading.toUpperCase(),
-                style: GoogleFonts.outfit(
+                style: AppFonts.sans(
                     fontSize: 12.5,
                     letterSpacing: 1.3,
                     fontWeight: FontWeight.w600,
@@ -655,7 +655,7 @@ class HomeFooter extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('POPULAR DESTINATIONS',
-            style: GoogleFonts.outfit(
+            style: AppFonts.sans(
                 fontSize: 12.5,
                 letterSpacing: 1.3,
                 fontWeight: FontWeight.w600,
@@ -679,7 +679,7 @@ class HomeFooter extends StatelessWidget {
                         Border.all(color: Colors.white.withValues(alpha: 0.14)),
                   ),
                   child: Text('Stays in $d',
-                      style: GoogleFonts.outfit(
+                      style: AppFonts.sans(
                           fontSize: 13, color: Colors.white70)),
                 ),
               ),
