@@ -7,6 +7,11 @@ import { requireUser, orgScope } from "./middleware/auth.js";
 import { accountRouter } from "./routes/account.js";
 import { authRouter } from "./routes/auth.js";
 import { invitesRouter, orgsRouter } from "./routes/orgs.js";
+import { bookingsRouter } from "./routes/bookings.js";
+import { calendarRouter } from "./routes/calendar.js";
+import { dashboardRouter } from "./routes/dashboard.js";
+import { expensesRouter } from "./routes/expenses.js";
+import { messagesRouter } from "./routes/messages.js";
 import { propertiesRouter } from "./routes/properties.js";
 import { publicUser } from "./security.js";
 import { uploadsDir } from "./uploads.js";
@@ -24,6 +29,7 @@ export function createApp(db, services = {}) {
   app.use(cors({ origin: corsOriginList(), allowedHeaders: ["Content-Type", "Authorization", "X-Org-Id"] }));
   // Profile photos arrive as base64 JSON (up to 5 MB); everything else is small.
   app.use("/api/account/avatar", express.json({ limit: "8mb" }));
+  app.use("/api/expenses/attachments", express.json({ limit: "8mb" }));
   app.use(express.json({ limit: "100kb" }));
   // Uploaded photos (unguessable file names), cached for a day.
   app.use("/media", express.static(uploadsDir, { maxAge: "1d", fallthrough: false, index: false }));
@@ -59,6 +65,36 @@ export function createApp(db, services = {}) {
     requireUser(db),
     orgScope(db, { read: "properties.read", write: "properties.write" }),
     propertiesRouter(db)
+  );
+  app.use(
+    "/api/calendar",
+    requireUser(db),
+    orgScope(db, { read: "calendar.read", write: "calendar.write" }),
+    calendarRouter(db)
+  );
+  app.use(
+    "/api/bookings",
+    requireUser(db),
+    orgScope(db, { read: "bookings.read", write: "bookings.write" }),
+    bookingsRouter(db)
+  );
+  app.use(
+    "/api/expenses",
+    requireUser(db),
+    orgScope(db, { read: "expenses.read", write: "expenses.write" }),
+    expensesRouter(db)
+  );
+  app.use(
+    "/api/dashboard",
+    requireUser(db),
+    orgScope(db, { read: "dashboard.read", write: "dashboard.read" }),
+    dashboardRouter(db)
+  );
+  app.use(
+    "/api/messages",
+    requireUser(db),
+    orgScope(db, { read: "messages.read", write: "messages.write" }),
+    messagesRouter(db)
   );
   app.use((err, _req, res, _next) => {
     if (err instanceof EmailDeliveryError) {
