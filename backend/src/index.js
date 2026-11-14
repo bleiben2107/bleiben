@@ -1,6 +1,8 @@
 import { config } from "./config.js";
 import { createApp } from "./app.js";
 import { createDb, createMongoDb } from "./db.js";
+import { expireHolds } from "./routes/bookings.js";
+import { dispatchScheduled } from "./routes/messages.js";
 
 let db;
 if (config.mongodbUri) {
@@ -18,6 +20,13 @@ if (config.mongodbUri) {
   db = createDb();
 }
 const app = createApp(db);
+
+// Release 15-minute booking holds that were never paid (MVP plan §2).
+setInterval(() => {
+  expireHolds(db).catch((err) => console.error("[holds]", err.message));
+  // Scheduled guest messages (held if the booking changed).
+  dispatchScheduled(db).catch((err) => console.error("[scheduled]", err.message));
+}, 60_000).unref();
 
 const green = (text) => `\x1b[32m${text}\x1b[0m`;
 const yellow = (text) => `\x1b[33m${text}\x1b[0m`;

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:bleiben/core/theme/app_fonts.dart';
 
@@ -5,6 +7,12 @@ import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../account/account_screen.dart';
 import '../auth/auth_controller.dart';
+import '../bookings/bookings_api.dart';
+import '../calendar/calendar_screen.dart';
+import '../dashboard/dashboard_screen.dart';
+import '../expenses/expenses_screen.dart';
+import '../inbox/inbox_screen.dart';
+import '../reservations/reservations_screen.dart';
 import '../home/home_content.dart';
 import '../home/home_nav.dart';
 import '../home/home_overlays.dart';
@@ -33,24 +41,27 @@ class HostSection {
 }
 
 const hostSections = [
-  HostSection('dashboard', 'Dashboard', Icons.space_dashboard_outlined, summary: [
+  HostSection('dashboard', 'Dashboard', Icons.space_dashboard_outlined, permission: 'dashboard.read', built: true, summary: [
     'Bookings today, upcoming, by status and by source',
     "Today's check-ins and check-outs",
     'Available, booked and blocked units',
     'Advance collected and balances pending',
   ]),
-  HostSection('calendar', 'Calendar', Icons.calendar_month_outlined, summary: [
+  HostSection('calendar', 'Calendar', Icons.calendar_month_outlined, permission: 'calendar.read', built: true, summary: [
     'Timeline of every room and unit',
     'Block and unblock dates with a reason',
     '15-minute holds and overlap prevention',
   ]),
   HostSection('properties', 'Properties', Icons.holiday_village_outlined,
       permission: 'properties.read', built: true),
-  HostSection('reservations', 'Reservations', Icons.event_available_outlined, summary: [
+  HostSection('reservations', 'Reservations', Icons.event_available_outlined,
+      permission: 'bookings.read', built: true, summary: [
     'Direct, manual and imported bookings in one list',
     'Create, edit, cancel, check in and check out',
     'Record payments, advance and balance',
   ]),
+  HostSection('expenses', 'Expenses', Icons.account_balance_wallet_outlined, permission: 'expenses.read', built: true),
+  HostSection('inbox', 'Messages', Icons.forum_outlined, permission: 'messages.read', built: true),
   HostSection('channels', 'Channel Manager', Icons.sync_alt_rounded, summary: [
     'Connect Airbnb and Booking.com with iCal links',
     'Export a calendar link for each room',
@@ -82,7 +93,25 @@ class HostControlCenterScreen extends StatefulWidget {
 
 class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
   late String _section = widget.initialSection;
+
+  /// Opens Add expense when Expenses is shown from the dashboard quick action.
+  bool _addExpenseOnOpen = false;
+  int _expenseOpens = 0;
+  int _unread = 0;
+  Timer? _unreadTimer;
+
+  Future<void> _refreshUnread() async {
+    if (!(auth.activeMembership?.can('messages.read') ?? false)) return;
+    try {
+      final r = await widget.api.get('/api/messages/unread-count');
+      final n = ((r as Map)['count'] as num).toInt();
+      if (mounted && n != _unread) setState(() => _unread = n);
+    } catch (_) {
+      // Badge is best-effort.
+    }
+  }
   late final PropertiesController _properties = PropertiesController(api: widget.api);
+  late final BookingsApi _bookings = BookingsApi(widget.api);
 
   AuthController get auth => widget.auth;
 
@@ -91,11 +120,14 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (auth.memberships.isEmpty) auth.ensureOrganization();
+      _refreshUnread();
     });
+    _unreadTimer = Timer.periodic(const Duration(seconds: 60), (_) => _refreshUnread());
   }
 
   @override
   void dispose() {
+    _unreadTimer?.cancel();
     _properties.dispose();
     super.dispose();
   }
@@ -132,6 +164,53 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
     }
   }
 
+  bool _consumeAddExpense() {
+    final v = _addExpenseOnOpen;
+    _addExpenseOnOpen = false;
+    return v;
+  }
+
+  Widget _buildSection(String key) {
+    final m = auth.activeMembership!;
+    // Keyed by org so switching organisation reloads the section.
+    return switch (key) {
+      'dashboard' => DashboardScreen(
+          key: ValueKey('dashboard-${m.orgId}'),
+          api: _bookings,
+          membership: m,
+          hostName: auth.displayName,
+          onOpenSection: (k) => setState(() => _section = k),
+          onAddExpense: () => setState(() {
+            _section = 'expenses';
+            _addExpenseOnOpen = true;
+            _expenseOpens++;
+          }),
+        ),
+      'inbox' => InboxScreen(
+          key: ValueKey('inbox-${m.orgId}'),
+          api: widget.api,
+          bookings: _bookings,
+          membership: m,
+          onUnreadChanged: _refreshUnread,
+        ),
+      'expenses' => ExpensesScreen(
+          key: ValueKey('expenses-${m.orgId}-$_expenseOpens'),
+          api: widget.api,
+          membership: m,
+          openAddOnStart: _consumeAddExpense(),
+        ),
+      'calendar' => CalendarScreen(key: ValueKey('calendar-${m.orgId}'), api: _bookings, membership: m),
+      'reservations' => ReservationsScreen(key: ValueKey('reservations-${m.orgId}'), api: _bookings, membership: m),
+      _ => PropertiesScreen(
+          key: const ValueKey('properties'),
+          controller: _properties,
+          membership: m,
+          onCreate: () => openWizard(),
+          onEditListing: (raw) => openWizard(draft: raw),
+        ),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -145,6 +224,7 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
             children: [
               _HostTopBar(
                 selected: _section,
+                unread: _unread,
                 initial: name.isEmpty ? null : name[0].toUpperCase(),
                 onSelect: (key) => setState(() => _section = key),
                 onLogo: () => Navigator.of(context).maybePop(),
@@ -156,13 +236,7 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
                     : !_allowed(section)
                         ? const _NoAccess()
                         : section.built
-                            ? PropertiesScreen(
-                                key: const ValueKey('properties'),
-                                controller: _properties,
-                                membership: auth.activeMembership!,
-                                onCreate: () => openWizard(),
-                                onEditListing: (raw) => openWizard(draft: raw),
-                              )
+                            ? _buildSection(section.key)
                             : _ComingNext(section: section),
               ),
             ],
@@ -176,6 +250,7 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
 class _HostTopBar extends StatelessWidget {
   const _HostTopBar({
     required this.selected,
+    this.unread = 0,
     required this.initial,
     required this.onSelect,
     required this.onLogo,
@@ -183,6 +258,7 @@ class _HostTopBar extends StatelessWidget {
   });
 
   final String selected;
+  final int unread;
   final String? initial;
   final ValueChanged<String> onSelect;
   final VoidCallback onLogo;
@@ -214,6 +290,7 @@ class _HostTopBar extends StatelessWidget {
                       _NavItem(
                         section: s,
                         selected: s.key == selected,
+                        badge: s.key == 'inbox' ? unread : 0,
                         showLabel: wide,
                         onTap: () => onSelect(s.key),
                       ),
@@ -238,7 +315,9 @@ class _HostTopBar extends StatelessWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  const _NavItem({required this.section, required this.selected, required this.showLabel, required this.onTap});
+  const _NavItem({required this.section, required this.selected, required this.showLabel, required this.onTap, this.badge = 0});
+
+  final int badge;
 
   final HostSection section;
   final bool selected;
@@ -259,7 +338,12 @@ class _NavItem extends StatelessWidget {
             border: Border(bottom: BorderSide(color: selected ? AppTheme.forest : Colors.transparent, width: 2)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(section.icon, size: 20, color: color),
+            Badge(
+              isLabelVisible: badge > 0,
+              label: Text('$badge'),
+              backgroundColor: AppTheme.clay,
+              child: Icon(section.icon, size: 20, color: color),
+            ),
             if (showLabel) ...[
               const SizedBox(width: 8),
               Text(section.label,

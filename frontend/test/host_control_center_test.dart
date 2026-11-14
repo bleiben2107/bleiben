@@ -137,17 +137,26 @@ Future<FakePropertiesApi> pumpHost(WidgetTester tester, {String role = 'owner'})
 void main() {
   testWidgets('shell shows the MVP nav and unbuilt sections say what is coming', (tester) async {
     await pumpHost(tester);
-    for (final label in ['Dashboard', 'Calendar', 'Properties', 'Reservations', 'Channel Manager', 'Notifications']) {
+    for (final label in ['Dashboard', 'Calendar', 'Properties', 'Reservations', 'Expenses', 'Messages', 'Channel Manager', 'Notifications']) {
       expect(find.text(label), findsWidgets);
     }
     // Properties is the landing section.
     expect(find.text('Pine Cottage'), findsOneWidget);
     expect(find.text('Goa Beach House'), findsOneWidget);
 
-    await tester.tap(find.text('Calendar'));
+    await tester.ensureVisible(find.text('Channel Manager'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Channel Manager'));
     await tester.pumpAndSettle();
     expect(find.text('Coming next in this release'), findsOneWidget);
-    expect(find.text('15-minute holds and overlap prevention'), findsOneWidget);
+    expect(find.text('Connect Airbnb and Booking.com with iCal links'), findsOneWidget);
+
+    // Built sections the role can't open explain why.
+    await tester.ensureVisible(find.text('Calendar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Calendar'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("Your role doesn't include this section"), findsOneWidget);
   });
 
   testWidgets('all properties: search and status filter call the API', (tester) async {
