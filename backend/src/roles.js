@@ -35,6 +35,9 @@ export const PERMISSIONS = {
     "dashboard.read",
     "messages.read",
     "messages.write",
+    "channels.read",
+    "channels.write",
+    "notifications.read",
   ],
   manager: [
     "org.read",
@@ -54,9 +57,12 @@ export const PERMISSIONS = {
     "dashboard.read",
     "messages.read",
     "messages.write",
+    "channels.read",
+    "channels.write",
+    "notifications.read",
   ],
-  staff: ["org.read", "team.read", "properties.read", "properties.write", "calendar.read", "calendar.write", "bookings.read", "bookings.write", "expenses.read", "expenses.write", "dashboard.read", "messages.read", "messages.write"],
-  read_only: ["org.read", "team.read", "properties.read", "calendar.read", "bookings.read", "expenses.read", "dashboard.read", "messages.read"],
+  staff: ["org.read", "team.read", "properties.read", "properties.write", "calendar.read", "calendar.write", "bookings.read", "bookings.write", "expenses.read", "expenses.write", "dashboard.read", "messages.read", "messages.write", "channels.read", "notifications.read"],
+  read_only: ["org.read", "team.read", "properties.read", "calendar.read", "bookings.read", "expenses.read", "dashboard.read", "messages.read", "channels.read", "notifications.read"],
 };
 
 export function isRole(value) {

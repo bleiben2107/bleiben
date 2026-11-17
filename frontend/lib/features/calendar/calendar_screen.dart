@@ -47,6 +47,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
   _Selection? _sel;
   final Set<int> _collapsed = {};
 
+  /// 'timeline' (rooms × 15 days) or 'month' (a month grid per room).
+  String _view = 'timeline';
+  late DateTime _month;
+  int? _propFilter;
+  int? _roomFilter;
+
   bool get _canEdit => widget.membership.can('calendar.write');
   bool get _canBook => widget.membership.can('bookings.write');
 
@@ -55,6 +61,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.initState();
     final now = DateTime.now();
     _from = DateTime(now.year, now.month, now.day);
+    _month = DateTime(now.year, now.month);
+    _load();
+  }
+
+  int get _monthDays => DateTime(_month.year, _month.month + 1, 0).day;
+
+  /// Properties/rooms after the property and room filters.
+  List<CalendarProperty> _visible(CalendarData d) => [
+        for (final p in d.properties)
+          if (_propFilter == null || p.id == _propFilter) p,
+      ];
+
+  List<CalendarRoom> _roomsOf(CalendarProperty p) => [
+        for (final r in p.rooms)
+          if (_roomFilter == null || r.id == _roomFilter) r,
+      ];
+
+  void _shiftMonth(int n) {
+    _month = DateTime(_month.year, _month.month + n);
     _load();
   }
 
@@ -72,7 +97,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (!keepSelection) _sel = null;
     });
     try {
-      final d = await widget.api.calendar(from: ymd(_from), search: _search.text.trim());
+      final d = _view == 'month'
+          ? await widget.api.calendar(from: ymd(_month), days: _monthDays, search: _search.text.trim())
+          : await widget.api.calendar(from: ymd(_from), search: _search.text.trim());
       if (!mounted) return;
       setState(() {
         _data = d;
@@ -175,7 +202,57 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _toolbar(bool wide) {
     final d = _data;
     final range = d == null ? '' : '${prettyDate(d.from)} – ${prettyDate(d.to, year: true)}';
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    final props = d?.properties ?? const <CalendarProperty>[];
+    final roomChoices = [
+      for (final p in props)
+        if (_propFilter == null || p.id == _propFilter) ...p.rooms.map((r) => (id: r.id, label: '${p.title} · ${r.name}')),
+    ];
     return Wrap(spacing: 10, runSpacing: 10, crossAxisAlignment: WrapCrossAlignment.center, children: [
+      SegmentedButton<String>(
+        key: const Key('calendar-view'),
+        segments: const [
+          ButtonSegment(value: 'timeline', icon: Icon(Icons.view_timeline_outlined), label: Text('Timeline')),
+          ButtonSegment(value: 'month', icon: Icon(Icons.calendar_view_month), label: Text('Month')),
+        ],
+        selected: {_view},
+        onSelectionChanged: (v) {
+          _view = v.first;
+          _load();
+        },
+      ),
+      DropdownButton<int?>(
+        key: const Key('calendar-property-filter'),
+        value: props.any((p) => p.id == _propFilter) ? _propFilter : null,
+        hint: const Text('All properties'),
+        items: [
+          const DropdownMenuItem<int?>(value: null, child: Text('All properties')),
+          for (final p in props) DropdownMenuItem<int?>(value: p.id, child: Text(p.title.isEmpty ? 'Untitled property' : p.title)),
+        ],
+        onChanged: (v) => setState(() {
+          _propFilter = v;
+          _roomFilter = null;
+          _sel = null;
+        }),
+      ),
+      DropdownButton<int?>(
+        key: const Key('calendar-room-filter'),
+        value: roomChoices.any((r) => r.id == _roomFilter) ? _roomFilter : null,
+        hint: const Text('All rooms'),
+        items: [
+          const DropdownMenuItem<int?>(value: null, child: Text('All rooms')),
+          for (final r in roomChoices) DropdownMenuItem<int?>(value: r.id, child: Text(r.label, overflow: TextOverflow.ellipsis)),
+        ],
+        onChanged: (v) => setState(() {
+          _roomFilter = v;
+          _sel = null;
+        }),
+      ),
+      if (_view == 'month') ...[
+        IconButton(key: const Key('prev-month'), tooltip: 'Previous month', onPressed: () => _shiftMonth(-1), icon: const Icon(Icons.chevron_left)),
+        Text('${months[_month.month - 1]} ${_month.year}', key: const Key('month-label'), style: AppFonts.sans(fontWeight: FontWeight.w700, fontSize: 16)),
+        IconButton(key: const Key('next-month'), tooltip: 'Next month', onPressed: () => _shiftMonth(1), icon: const Icon(Icons.chevron_right)),
+      ],
       SizedBox(
         width: wide ? 300 : double.infinity,
         child: TextField(
@@ -190,15 +267,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         ),
       ),
-      OutlinedButton.icon(
-          key: const Key('prev-15'), onPressed: () => _shift(-15), icon: const Icon(Icons.chevron_left), label: const Text('Previous 15 days')),
-      OutlinedButton.icon(onPressed: _pickStart, icon: const Icon(Icons.event_outlined), label: Text(range.isEmpty ? 'Pick date' : range)),
-      OutlinedButton.icon(
-          key: const Key('next-15'), onPressed: () => _shift(15), icon: const Icon(Icons.chevron_right), label: const Text('Next 15 days')),
+      if (_view == 'timeline') ...[
+        OutlinedButton.icon(
+            key: const Key('prev-15'), onPressed: () => _shift(-15), icon: const Icon(Icons.chevron_left), label: const Text('Previous 15 days')),
+        OutlinedButton.icon(onPressed: _pickStart, icon: const Icon(Icons.event_outlined), label: Text(range.isEmpty ? 'Pick date' : range)),
+        OutlinedButton.icon(
+            key: const Key('next-15'), onPressed: () => _shift(15), icon: const Icon(Icons.chevron_right), label: const Text('Next 15 days')),
+      ],
       TextButton(
           onPressed: () {
             final n = DateTime.now();
             _from = DateTime(n.year, n.month, n.day);
+            _month = DateTime(n.year, n.month);
             _load();
           },
           child: const Text('Today')),
@@ -231,9 +311,104 @@ class _CalendarScreenState extends State<CalendarScreen> {
       dot(const Color(0xFFE9E6E1), 'Blocked'),
       dot(AppTheme.forest, 'Confirmed'),
       dot(AppTheme.clay, 'Pending payment / hold'),
+      dot(AppTheme.dangerSoft, 'Overbooked (conflict)', border: AppTheme.danger),
       dot(const Color(0xFF2F5C8A), 'Checked in'),
       Text('Tap a date to select it, tap another date in the same row for a range. Alt + ←/→ moves 15 days.',
           style: AppFonts.sans(fontSize: 13, color: AppTheme.muted)),
+    ]);
+  }
+
+  /// Month grid per room: available / booked / blocked / held / overbooked days.
+  Widget _monthBody(CalendarData d) {
+    final today = ymd(DateTime.now());
+    final firstWeekday = DateTime(_month.year, _month.month).weekday; // 1 = Monday
+    final cards = <Widget>[];
+    for (final p in _visible(d)) {
+      for (final r in _roomsOf(p)) {
+        final cells = <Widget>[for (var i = 1; i < firstWeekday; i++) const SizedBox.shrink()];
+        for (var i = 0; i < r.cells.length; i++) {
+          final c = r.cells[i];
+          final held = r.bookings.where((b) => b.status == 'held' && b.covers(c.date)).toList();
+          final over = !c.blocked && c.booked > c.units;
+          final soldOut = !c.blocked && c.available <= 0;
+          final sel = _sel != null && _sel!.room.id == r.id && i >= _sel!.start && i <= _sel!.end;
+          final bg = sel
+              ? const Color(0xFFDCE6D3)
+              : over
+                  ? AppTheme.dangerSoft
+                  : c.blocked
+                      ? const Color(0xFFE9E6E1)
+                      : held.isNotEmpty
+                          ? AppTheme.warningSoft
+                          : soldOut
+                              ? AppTheme.sand
+                              : Colors.white;
+          final label = over
+              ? 'Overbooked'
+              : c.blocked
+                  ? 'Blocked'
+                  : held.isNotEmpty && soldOut
+                      ? 'On hold'
+                      : soldOut
+                          ? 'Sold out'
+                          : '${c.available}/${c.units} free';
+          cells.add(Tooltip(
+            message: [
+              '${prettyDate(c.date, year: true)} · ${money(c.price)}',
+              if (c.blocked) 'Blocked${(c.blockReason ?? '').isEmpty ? '' : ' · ${c.blockReason}'}',
+              for (final b in r.bookings.where((b) => b.covers(c.date)))
+                '${b.guestName} · ${statusLabels[b.status] ?? b.status}${b.holdExpiresAt != null ? ' · hold until ${DateTime.parse(b.holdExpiresAt!).toLocal().toString().substring(11, 16)}' : ''}',
+            ].join('\n'),
+            child: InkWell(
+              key: Key('month-cell-${r.id}-${c.date}'),
+              onTap: () => _tapCell(p, r, i),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: over ? AppTheme.danger : c.date == today ? AppTheme.forest : AppTheme.border, width: c.date == today || over ? 1.5 : 1),
+                ),
+                child: Opacity(
+                  opacity: c.date.compareTo(today) < 0 ? 0.55 : 1,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('${int.parse(c.date.substring(8))}', style: AppFonts.sans(fontWeight: FontWeight.w700, fontSize: 13)),
+                    const Spacer(),
+                    Text(money(c.price), style: AppFonts.sans(fontSize: 11.5, color: c.customPrice ? AppTheme.clay : AppTheme.ink)),
+                    Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppFonts.sans(fontSize: 11, color: over || c.blocked ? AppTheme.danger : AppTheme.muted)),
+                  ]),
+                ),
+              ),
+            ),
+          ));
+        }
+        cards.add(Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppTheme.border), borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text('${p.title} · ${r.name}', style: AppFonts.sans(fontWeight: FontWeight.w700, fontSize: 15)),
+            Text('${r.units} unit${r.units == 1 ? '' : 's'} · ${r.occupancy}% booked', style: AppFonts.sans(fontSize: 12.5, color: AppTheme.muted)),
+            const SizedBox(height: 8),
+            Row(children: [for (final w in weekdays) Expanded(child: Center(child: Text(w, style: AppFonts.sans(fontSize: 12, color: AppTheme.muted))))]),
+            const SizedBox(height: 4),
+            GridView.count(
+              crossAxisCount: 7,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 4,
+              crossAxisSpacing: 4,
+              childAspectRatio: 1.25,
+              children: cells,
+            ),
+          ]),
+        ));
+      }
+    }
+    if (cards.isEmpty) return Center(child: Text('No rooms match these filters.', style: AppFonts.sans(color: AppTheme.muted)));
+    return Stack(children: [
+      ListView(children: cards),
+      if (_loading) const Positioned(top: 0, left: 0, right: 0, child: LinearProgressIndicator(minHeight: 2)),
     ]);
   }
 
@@ -249,6 +424,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             : const CircularProgressIndicator(),
       );
     }
+    if (_view == 'month' && d.properties.isNotEmpty) return _monthBody(d);
     if (d.properties.isEmpty) {
       return Center(
         child: Text(
@@ -259,10 +435,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
     final today = ymd(DateTime.now());
     final rows = <({CalendarProperty p, CalendarRoom? r})>[];
-    for (final p in d.properties) {
+    for (final p in _visible(d)) {
       rows.add((p: p, r: null));
       if (!_collapsed.contains(p.id)) {
-        for (final r in p.rooms) {
+        for (final r in _roomsOf(p)) {
           rows.add((p: p, r: r));
         }
       }
@@ -421,7 +597,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final soldOut = !c.blocked && c.available <= 0;
     final bg = selected
         ? const Color(0xFFDCE6D3)
-        : c.blocked
+        : !c.blocked && c.booked > c.units
+            ? AppTheme.dangerSoft
+            : c.blocked
             ? const Color(0xFFE9E6E1)
             : soldOut
                 ? AppTheme.sand
@@ -455,7 +633,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       fontWeight: FontWeight.w600,
                       color: c.customPrice ? AppTheme.clay : AppTheme.ink,
                       decoration: c.blocked ? TextDecoration.lineThrough : null)),
-              Text(c.blocked ? 'Blocked' : soldOut ? 'Sold out' : '${c.available} left',
+              Text(c.blocked ? 'Blocked' : c.booked > c.units ? 'Overbooked' : soldOut ? 'Sold out' : '${c.available} left',
                   style: AppFonts.sans(fontSize: 11.5, color: c.blocked ? AppTheme.danger : AppTheme.muted)),
             ]),
           ),
@@ -476,7 +654,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       'checked_out' => AppTheme.muted,
       _ => AppTheme.forest,
     };
-    final label = '${b.status == 'held' ? 'On hold · ' : b.status == 'pending_payment' ? 'Booking request · ' : ''}'
+    final label = '${b.externalBlock ? '' : b.status == 'held' ? 'On hold · ' : b.status == 'pending_payment' ? 'Booking request · ' : ''}'
         '${b.guestName} · ${b.guests}';
     return Positioned(
       left: left + 2,
@@ -485,6 +663,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       height: _laneH - 4,
       child: Tooltip(
         message: '${b.guestName} · ${b.code}\n${prettyDate(b.checkIn)} → ${prettyDate(b.checkOut)} · ${bookingSources[b.source] ?? b.source}'
+            '${b.holdExpiresAt != null ? '\nHold expires at ${DateTime.parse(b.holdExpiresAt!).toLocal().toString().substring(11, 16)}' : ''}'
             '${b.balance > 0 ? '\nBalance ${money(b.balance)}' : ''}',
         child: Material(
           color: color,

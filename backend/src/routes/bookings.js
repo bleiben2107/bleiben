@@ -18,7 +18,9 @@ import {
   toDate,
   withLocks,
 } from "../bookings/core.js";
+import { notify } from "../notify.js";
 import { can } from "../roles.js";
+import { roomNights } from "../bookings/core.js";
 
 const HOLD_MINUTES = 15;
 const PHONE_RE = /^\+?[0-9 ()-]{7,20}$/;
@@ -80,6 +82,8 @@ export async function publicBooking(db, b, cache = {}) {
     hold_expires_at: b.status === "held" ? b.hold_expires_at : null,
     cancel_reason: b.cancel_reason ?? null,
     events: b.events ?? [],
+    imported: !!b.imported,
+    external_block: !!b.external_block,
     booked_at: b.created_at,
     updated_at: b.updated_at,
   };
@@ -150,7 +154,7 @@ const TABS = {
   offline: (b) => OFFLINE_SOURCES.includes(b.source),
 };
 
-export function bookingsRouter(db) {
+export function bookingsRouter(db, services = {}) {
   const router = Router();
 
   async function orgBookings(orgId) {
@@ -168,6 +172,7 @@ export function bookingsRouter(db) {
     const tab = TABS[query.tab] ?? TABS.all;
     const q = String(query.q ?? "").trim().toLowerCase();
     return list.filter((b) => {
+      if (b.external_block && query.include_blocks !== "true") return false;
       if (!tab(b, t)) return false;
       if (q && ![b.code, b.guest?.name, b.guest?.phone, b.guest?.email].join(" ").toLowerCase().includes(q)) return false;
       if (query.property_id && b.property_id !== Number(query.property_id)) return false;
@@ -196,7 +201,8 @@ export function bookingsRouter(db) {
       const items = [];
       for (const b of filtered.slice((page - 1) * size, page * size)) items.push(await publicBooking(db, b));
       const t = todayStr();
-      const counts = Object.fromEntries(Object.entries(TABS).map(([k, f]) => [k, all.filter((b) => f(b, t)).length]));
+      const visible = all.filter((b) => !b.external_block);
+      const counts = Object.fromEntries(Object.entries(TABS).map(([k, f]) => [k, visible.filter((b) => f(b, t)).length]));
       return res.json({ items, total: filtered.length, page, page_size: size, counts });
     }),
   );
@@ -233,11 +239,15 @@ export function bookingsRouter(db) {
       const { adults, children } = validateGuests(body, room);
       const source = body.source ?? "manual";
       if (!SOURCES[source]) throw new InputError(`Source must be one of: ${Object.keys(SOURCES).join(", ")}`);
-      const payment = validatePayment(body.payment);
-      const isHold = body.hold === true;
+      const isInquiry = body.inquiry === true;
+      const payment = isInquiry ? null : validatePayment(body.payment);
+      const isHold = !isInquiry && body.hold === true;
 
       const created = await withLocks([`room:${room.id}`], async () => {
-        const snapshot = await assertAvailable(db, room, property, body.check_in, body.check_out);
+        // An inquiry records interest without holding inventory.
+        const snapshot = isInquiry
+          ? await roomNights(db, room, property, body.check_in, body.check_out)
+          : await assertAvailable(db, room, property, body.check_in, body.check_out);
         const q = quote(room, property, snapshot, adults + children);
         let total = q.total;
         if (body.total !== undefined && body.total !== null && body.total !== "") {
@@ -246,7 +256,7 @@ export function bookingsRouter(db) {
         }
         if (payment && payment.amount > total) throw new InputError("The payment is more than the booking total");
         const now = nowIso();
-        const status = isHold ? "held" : payment || total === 0 || body.confirm === true ? "confirmed" : "pending_payment";
+        const status = isInquiry ? "inquiry" : isHold ? "held" : payment || total === 0 || body.confirm === true ? "confirmed" : "pending_payment";
         const payments = payment ? [{ ...payment, kind: "payment", at: now, by: req.user.name || req.user.email }] : [];
         return db.insertDoc("bookings", {
           org_id: req.scope.org_id,
@@ -269,10 +279,81 @@ export function bookingsRouter(db) {
           created_by: req.user.id,
           created_at: now,
           updated_at: now,
-          events: [event(req, isHold ? "held" : "created", `${SOURCES[source]} · ${status.replace("_", " ")}`)],
+          events: [event(req, isInquiry ? "inquiry" : isHold ? "held" : "created", `${SOURCES[source]} · ${status.replace("_", " ")}`)],
         });
       });
+      await notify(db, services, {
+        orgId: created.org_id,
+        kind: created.status === "confirmed" ? "booking_confirmed" : "booking_created",
+        booking: created,
+        guest: created.status === "confirmed" && body.notify_guest !== false,
+      });
       return res.status(201).json(await publicBooking(db, created));
+    }),
+  );
+
+  // ── Guests: records built from bookings (MVP plan §3 "Guests") ─────────────
+  const guestKey = (g) => {
+    const phone = String(g?.phone ?? "").replace(/[^\d]/g, "").slice(-10);
+    if (phone.length >= 7) return `p:${phone}`;
+    const email = String(g?.email ?? "").trim().toLowerCase();
+    return email ? `e:${email}` : null;
+  };
+
+  async function guestRecords(orgId) {
+    const map = new Map();
+    for (const b of await orgBookings(orgId)) {
+      if (b.imported) continue;
+      const key = guestKey(b.guest);
+      if (!key) continue;
+      const g = map.get(key) ?? { key, name: b.guest.name, phone: b.guest.phone ?? "", email: b.guest.email ?? "", bookings: [], stays: 0, nights: 0, spent: 0, sources: new Set(), first_booked: b.created_at, last_stay: null };
+      g.bookings.push(b);
+      if (b.created_at < g.first_booked) g.first_booked = b.created_at;
+      if (!g.email && b.guest.email) g.email = b.guest.email;
+      if (!g.phone && b.guest.phone) g.phone = b.guest.phone;
+      if (b.created_at >= (g._latest ?? "")) {
+        g._latest = b.created_at;
+        g.name = b.guest.name;
+      }
+      g.sources.add(SOURCES[b.source] ?? b.source);
+      if (["confirmed", "checked_in", "checked_out"].includes(b.status)) {
+        g.stays += 1;
+        g.nights += Math.round((toDate(b.check_out) - toDate(b.check_in)) / 86400000);
+        g.spent += paid(b);
+        if (!g.last_stay || b.check_in > g.last_stay) g.last_stay = b.check_in;
+      }
+      map.set(key, g);
+    }
+    return [...map.values()];
+  }
+
+  router.get(
+    "/guests/list",
+    handle(async (req, res) => {
+      const q = String(req.query.q ?? "").trim().toLowerCase();
+      let list = await guestRecords(req.scope.org_id);
+      if (q) list = list.filter((g) => [g.name, g.phone, g.email].join(" ").toLowerCase().includes(q));
+      list.sort((a, b) => (b.last_stay ?? b.first_booked).localeCompare(a.last_stay ?? a.first_booked));
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const size = 25;
+      return res.json({
+        items: list.slice((page - 1) * size, page * size).map(({ bookings, sources, _latest, ...g }) => ({ ...g, bookings: bookings.length, sources: [...sources], repeat: g.stays > 1 })),
+        total: list.length,
+        page,
+        page_size: size,
+      });
+    }),
+  );
+
+  router.get(
+    "/guests/detail",
+    handle(async (req, res) => {
+      const g = (await guestRecords(req.scope.org_id)).find((x) => x.key === String(req.query.key ?? ""));
+      if (!g) throw new InputError("Guest not found", 404);
+      const items = [];
+      for (const b of g.bookings.sort((a, c) => (a.check_in < c.check_in ? 1 : -1))) items.push(await publicBooking(db, b));
+      const { bookings: _b, sources, _latest, ...rest } = g;
+      return res.json({ ...rest, sources: [...sources], repeat: g.stays > 1, bookings: items });
     }),
   );
 
@@ -355,12 +436,22 @@ export function bookingsRouter(db) {
     if (!(TRANSITIONS[b.status] ?? []).includes(to)) {
       throw new InputError(`A ${b.status.replace("_", " ")} booking can't be marked ${to.replace("_", " ")}`, 409);
     }
-    const updated = await db.updateDoc("bookings", { id: b.id }, {
-      status: to,
-      ...extra,
-      updated_at: nowIso(),
-      events: [...(b.events ?? []), event(req, to, detail)],
+    const updated = await withLocks([`room:${b.room_id}`], async () => {
+      // An inquiry starts holding inventory only now: re-check availability.
+      if (!occupies(b) && ["held", "pending_payment", "confirmed"].includes(to)) {
+        const found = await findRoom(db, b.org_id, b.room_id);
+        if (!found) throw new InputError("Room not found", 404);
+        await assertAvailable(db, found.room, found.property, b.check_in, b.check_out, b.id);
+      }
+      return db.updateDoc("bookings", { id: b.id }, {
+        status: to,
+        ...extra,
+        updated_at: nowIso(),
+        events: [...(b.events ?? []), event(req, to, detail)],
+      });
     });
+    if (to === "confirmed") await notify(db, services, { orgId: b.org_id, kind: "booking_confirmed", booking: updated, guest: req.body?.notify_guest !== false });
+    if (to === "cancelled") await notify(db, services, { orgId: b.org_id, kind: "booking_cancelled", booking: updated, guest: req.body?.notify_guest !== false && !b.imported });
     return res.json(await publicBooking(db, updated));
   }
 
@@ -396,6 +487,9 @@ export function bookingsRouter(db) {
       if (b.status === "pending_payment" && kind === "payment") set.status = "confirmed";
       set.events = [...(b.events ?? []), event(req, kind === "refund" ? "refunded" : "payment", `₹${payment.amount} · ${payment.method}`)];
       const updated = await db.updateDoc("bookings", { id: b.id }, set);
+      if (kind === "payment") {
+        await notify(db, services, { orgId: b.org_id, kind: "payment_received", booking: updated, guest: req.body?.notify_guest !== false, extra: { amount: payment.amount, method: payment.method } });
+      }
       return res.status(201).json(await publicBooking(db, updated));
     }),
   );

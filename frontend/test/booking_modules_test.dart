@@ -16,6 +16,7 @@ import 'package:bleiben/features/host/host_control_center.dart';
 const _all = [
   'org.read', 'properties.read', 'properties.write', 'calendar.read', 'calendar.write', 'bookings.read', 'bookings.write',
   'bookings.cancel', 'expenses.read', 'expenses.write', 'dashboard.read', 'messages.read', 'messages.write',
+  'channels.read', 'channels.write', 'notifications.read', 'org.update', 'billing.manage',
 ];
 
 String _d(int n) => ymd(DateTime.now().add(Duration(days: n)));
@@ -51,6 +52,30 @@ Map<String, dynamic> _booking({String status = 'confirmed'}) => {
 
 class FakeHostApi {
   final requests = <String>[];
+  bool notificationsRead = false;
+  bool conflictResolved = false;
+  List<Map<String, dynamic>> channels = [];
+  Map<String, dynamic> billing = {
+    'status': 'trialing',
+    'status_ends': _d(10),
+    'reason': null,
+    'plan': null,
+    'plan_name': 'Free trial',
+    'interval': null,
+    'units': 0,
+    'trial_ends_at': _d(10),
+    'current_period_end': null,
+    'cancel_at_period_end': false,
+    'read_only': false,
+    'bookable': true,
+    'features': ['dashboard', 'calendar', 'expenses', 'inbox'],
+    'limits': {'max_properties': null, 'max_units': 20},
+    'usage': {'properties': 1, 'units': 2},
+    'history': [
+      {'at': '2026-11-01T00:00:00Z', 'action': 'trial_started', 'detail': '14-day free trial'}
+    ],
+    'payment_provider': 'test',
+  };
   final bodies = <String, Map<String, dynamic>>{};
 
   late final client = MockClient((req) async {
@@ -190,6 +215,14 @@ class FakeHostApi {
             for (var w = 0; w < 13; w++)
               {'from': _d(w * 7), 'to': _d(w * 7 + 6), 'booked_nights': 3, 'offered_nights': 14, 'pct': 21.4, 'band': w == 0 ? 'high' : 'low'}
           ],
+          'overview': {'total': 4, 'booked_today': 1, 'upcoming': 2, 'confirmed': 3, 'pending': 1, 'cancelled': 0, 'by_source': {'direct': 2, 'ota': 1, 'manual': 1}},
+          'payments': {'booking_value': 12000, 'collected': 8000, 'pending_balance': 4000, 'failed_count': 1, 'failed_amount': 2000, 'online_paid': 2000},
+          'inventory': {
+            'properties': 1, 'rooms': 1, 'units': 2, 'available': 1, 'booked': 1, 'blocked': 0,
+            'by_property': [
+              {'id': 1, 'title': 'Pine Cottage', 'units': 2, 'available': 1, 'booked': 1, 'blocked': 0}
+            ]
+          },
           'alerts': [
             {'kind': 'balance_due', 'count': 1, 'text': '1 arriving guest has a balance to collect'}
           ],
@@ -285,10 +318,185 @@ class FakeHostApi {
         });
       case ('POST', '/api/messages/5/messages'):
         return json({'message': {}, 'total': 2}, 201);
+      case ('GET', '/api/notifications/unread-count'):
+        return json({'count': notificationsRead ? 0 : 1});
+      case ('GET', '/api/notifications'):
+        return json({
+          'items': [
+            {
+              'id': 9,
+              'kind': 'booking_confirmed',
+              'kind_label': 'Booking confirmed',
+              'title': 'Booking BLB-ABC123 confirmed',
+              'body': 'Ravi Kumar · Pine Cottage · Deluxe',
+              'booking_id': 7,
+              'booking_code': 'BLB-ABC123',
+              'data': {},
+              'deliveries': [
+                {'channel': 'email', 'to': 'ravi@example.com', 'status': 'sent'},
+                {'channel': 'owner_email', 'to': 'asha@example.com', 'status': 'failed', 'error': 'SMTP down'},
+              ],
+              'muted': false,
+              'read': notificationsRead,
+              'created_at': '2026-11-14T10:00:00Z',
+            }
+          ],
+          'total': 1,
+          'kinds': {'booking_confirmed': 'Booking confirmed', 'payment_failed': 'Payment failed'},
+        });
+      case ('POST', '/api/notifications/9/read'):
+      case ('POST', '/api/notifications/read-all'):
+        notificationsRead = true;
+        return json({'read': true});
+      case ('GET', '/api/billing'):
+        return json(billing);
+      case ('GET', '/api/billing/plans'):
+        return json({
+          'plans': [
+            {'id': 'starter', 'name': 'Starter', 'tagline': 'One homestay', 'unit_price': {'month': 249, 'year': 2490}, 'max_properties': 2, 'max_units': 10, 'features': ['calendar']},
+            {'id': 'growth', 'name': 'Growth', 'tagline': 'Teams', 'unit_price': {'month': 349, 'year': 3490}, 'max_properties': null, 'max_units': null, 'features': ['calendar', 'expenses']},
+          ],
+          'feature_labels': {'calendar': 'Calendar & holds', 'expenses': 'Expenses & profit'},
+          'trial_days': 14,
+          'grace_days': 7,
+          'gst_rate': 0.18,
+        });
+      case ('GET', '/api/billing/invoices'):
+        return json(billing['status'] == 'active'
+            ? [
+                {'id': 1, 'number': 'BLB-2026-00001', 'issued_on': '2026-11-14', 'total': 1175.28, 'description': 'Starter · 4 unit(s)'}
+              ]
+            : []);
+      case ('POST', '/api/billing/checkout'):
+        return json({'id': 3, 'provider': 'test', 'order_id': 'test_order_1', 'amount': 1175.28, 'currency': 'INR', 'key_id': null}, 201);
+      case ('POST', '/api/billing/checkout/3/verify'):
+        billing = {...billing, 'status': 'active', 'plan': 'starter', 'plan_name': 'Starter', 'units': 4, 'interval': 'month', 'current_period_end': _d(30), 'status_ends': _d(30)};
+        return json({'status': 'paid', 'invoice_id': 1});
+      case ('GET', '/api/channels'):
+        return json({
+          'connections': channels,
+          'exports': [
+            {'room_id': 11, 'room': 'Deluxe', 'property': 'Pine Cottage', 'units': 2, 'url': 'http://127.0.0.1:8000/api/ical/tok.ics'}
+          ],
+          'open_conflicts': 1,
+          'channels': {'airbnb': 'Airbnb', 'booking_com': 'Booking.com'},
+          'sync_every_minutes': 30,
+        });
+      case ('GET', '/api/channels/conflicts/list'):
+        return json([
+          {
+            'id': 4,
+            'status': conflictResolved ? 'resolved' : 'open',
+            'property': 'Pine Cottage',
+            'room': 'Deluxe',
+            'dates': [_d(3)],
+            'channel_label': 'Airbnb',
+            'booking': {'id': 8, 'code': 'BLB-AIR001', 'guest': 'Airbnb guest', 'check_in': _d(3), 'check_out': _d(4), 'status': 'confirmed'},
+            'overlapping': [
+              {'id': 7, 'code': 'BLB-ABC123', 'source': 'phone', 'guest': 'Ravi Kumar', 'check_in': _d(1), 'check_out': _d(4)}
+            ],
+            'resolution': conflictResolved ? 'Moved guest' : null,
+            'resolved_by': conflictResolved ? 'Asha Rao' : null,
+          }
+        ]);
+      case ('POST', '/api/channels'):
+        channels = [
+          {
+            'id': 2,
+            'name': 'Airbnb · Deluxe',
+            'channel': 'airbnb',
+            'channel_label': 'Airbnb',
+            'room_id': 11,
+            'room': 'Deluxe',
+            'property': 'Pine Cottage',
+            'url_masked': 'www.airbnb.com/…12.ics',
+            'status': 'active',
+            'last_sync_at': '2026-11-14T10:00:00Z',
+            'last_success_at': '2026-11-14T10:00:00Z',
+            'last_error': null,
+            'next_sync_at': null,
+          }
+        ];
+        return json({...channels.first, 'first_sync': {'ok': true, 'added': 2, 'skipped_echo': 1, 'conflicts': 0}}, 201);
+      case ('POST', '/api/channels/conflicts/4/resolve'):
+        conflictResolved = true;
+        return json({'status': 'resolved'});
+      case ('GET', '/api/settings'):
+        return json({
+          'organization': {'name': 'Asha Stays', 'contact_email': '', 'address_parts': {'country': 'India'}},
+          'preferences': {'check_in_time': '13:00', 'check_out_time': '11:00', 'cancellation_policy': 'flexible', 'tax_percent': 0, 'prices_include_tax': true, 'default_advance_percent': 0},
+          'notifications': {'guest_email': true, 'guest_sms': true, 'owner_email': true, 'events': {'booking_confirmed': true}},
+          'notification_kinds': {'booking_confirmed': 'Booking confirmed'},
+          'payment_gateway': {'provider': 'none', 'providers': {'razorpay': 'Razorpay', 'test': 'Test mode (no real money)'}, 'key_id': null, 'key_secret_masked': null, 'has_webhook_secret': false, 'webhook_url': 'http://127.0.0.1:8000/api/public/payments/razorpay/1'},
+        });
+      case ('PATCH', '/api/settings/organization'):
+      case ('PUT', '/api/settings/payment-gateway'):
+        return json({});
+      case ('GET', '/api/bookings/guests/list'):
+        return json({
+          'items': [
+            {'key': 'p:9811111111', 'name': 'Ravi Kumar', 'phone': '+91 98111 11111', 'email': '', 'bookings': 2, 'stays': 2, 'nights': 4, 'spent': 11000, 'sources': ['Phone'], 'repeat': true, 'last_stay': _d(1), 'first_booked': '2026-10-01'}
+          ],
+          'total': 1,
+          'page': 1,
+          'page_size': 25,
+        });
+      case ('GET', '/api/public/stays/pine-cottage'):
+        return json({
+          'slug': 'pine-cottage',
+          'title': 'Pine Cottage',
+          'description': 'A quiet cottage in the pines.',
+          'property_type': 'Cottage',
+          'location': 'Manali, Himachal Pradesh',
+          'photos': [],
+          'amenities': ['wifi'],
+          'check_in_time': '13:00',
+          'check_out_time': '11:00',
+          'house_rules': {'smokingAllowed': false},
+          'cancellation_policy': 'flexible',
+          'advance_percent': 25,
+          'rooms': [
+            {'id': 11, 'name': 'Deluxe', 'max_guests': 3, 'price_from': 4000}
+          ],
+          'booking_mode': 'instant',
+          'payment_provider': 'test',
+        });
+      case ('POST', '/api/public/stays/pine-cottage/quote'):
+        return json({
+          'rooms': [
+            {'room_id': 11, 'available': true, 'nights': 2, 'stay': 8000, 'extra_guest_charge': 0, 'total': 8000}
+          ],
+          'advance_percent': 25,
+        });
+      case ('POST', '/api/public/stays/pine-cottage/book'):
+        return json({
+          'booking': guestBooking('held'),
+          'token': 'tok123',
+          'payment': {'attempt_id': 5, 'provider': 'test', 'order_id': 'test_order_9', 'amount': 2000, 'currency': 'INR', 'key_id': null},
+        }, 201);
+      case ('POST', '/api/public/payments/5/verify'):
+        return json({'payment_status': 'paid', 'message': 'Payment received — your booking is confirmed.', 'booking': guestBooking('confirmed')});
     }
     return json({'detail': 'not found'}, 404);
   });
 }
+
+Map<String, dynamic> guestBooking(String status) => {
+      'code': 'BLB-WEB001',
+      'status': status,
+      'property': 'Pine Cottage',
+      'room': 'Deluxe',
+      'check_in': _d(3),
+      'check_out': _d(5),
+      'guest_name': 'Meera Shah',
+      'adults': 2,
+      'children': 0,
+      'total': 8000,
+      'paid': status == 'confirmed' ? 2000 : 0,
+      'balance': status == 'confirmed' ? 6000 : 8000,
+      'amount_due_now': 2000,
+      'hold_expires_at': status == 'held' ? DateTime.now().toUtc().add(const Duration(minutes: 15)).toIso8601String() : null,
+    };
 
 Future<FakeHostApi> pumpSection(WidgetTester tester, String section) async {
   GoogleFonts.config.allowRuntimeFetching = false;
@@ -385,8 +593,10 @@ void main() {
 
   testWidgets('messages: unread badge, open a conversation, reply', (tester) async {
     final fake = await pumpSection(tester, 'inbox');
+    expect(find.text('2'), findsWidgets); // badge: 1 notification + 1 conversation
+    await tester.tap(find.text('Guest messages'));
+    await tester.pumpAndSettle();
     expect(find.text('Ravi Kumar'), findsWidgets);
-    expect(find.text('1'), findsWidgets); // unread badge on the nav
 
     await tester.tap(find.byKey(const Key('thread-5')));
     await tester.pumpAndSettle();
@@ -401,3 +611,5 @@ void main() {
     expect(fake.requests.where((r) => r == 'POST http://127.0.0.1:8000/api/messages/5/state' || r.endsWith('/api/messages/5/state')), isNotEmpty);
   });
 }
+
+

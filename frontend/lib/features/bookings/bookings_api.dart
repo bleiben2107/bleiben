@@ -14,6 +14,8 @@ const bookingSources = {
   'makemytrip': 'MakeMyTrip',
   'goibibo': 'Goibibo',
   'agoda': 'Agoda',
+  'vrbo': 'Vrbo',
+  'ical': 'Other calendar',
 };
 
 const paymentMethods = {
@@ -23,6 +25,7 @@ const paymentMethods = {
   'bank_transfer': 'Bank transfer',
   'payment_link': 'Payment link',
   'ota': 'Paid to OTA',
+  'online': 'Online (gateway)',
 };
 
 const statusLabels = {
@@ -109,7 +112,10 @@ class BookingBar {
         status = (j['status'] as String?) ?? 'confirmed',
         checkIn = j['check_in'] as String,
         checkOut = j['check_out'] as String,
-        balance = (j['balance'] as num?)?.toDouble() ?? 0;
+        balance = (j['balance'] as num?)?.toDouble() ?? 0,
+        holdExpiresAt = j['hold_expires_at'] as String?,
+        imported = (j['imported'] as bool?) ?? false,
+        externalBlock = (j['external_block'] as bool?) ?? false;
 
   final int id;
   final String code;
@@ -120,6 +126,12 @@ class BookingBar {
   final String checkIn;
   final String checkOut;
   final double balance;
+  final String? holdExpiresAt;
+  final bool imported;
+  final bool externalBlock;
+
+  /// Covers [date] (check-out exclusive).
+  bool covers(String date) => checkIn.compareTo(date) <= 0 && checkOut.compareTo(date) > 0;
 }
 
 class CalendarRoom {
@@ -232,7 +244,8 @@ class Booking {
         notes = (j['notes'] as String?) ?? '',
         holdExpiresAt = j['hold_expires_at'] as String?,
         cancelReason = j['cancel_reason'] as String?,
-        bookedAt = (j['booked_at'] as String?) ?? '';
+        bookedAt = (j['booked_at'] as String?) ?? '',
+        imported = (j['imported'] as bool?) ?? false;
 
   final int id;
   final String code;
@@ -262,6 +275,7 @@ class Booking {
   final String? holdExpiresAt;
   final String? cancelReason;
   final String bookedAt;
+  final bool imported;
 
   int get guests => adults + children;
   bool get isOpen => !['cancelled', 'expired', 'no_show', 'checked_out'].contains(status);
@@ -289,6 +303,7 @@ class BookingsApi {
   final ApiClient api;
 
   Future<CalendarData> calendar({required String from, int days = 15, String search = ''}) async {
+    assert(days >= 1 && days <= 62);
     final q = 'from=$from&days=$days${search.isEmpty ? '' : '&search=${Uri.encodeQueryComponent(search)}'}';
     return CalendarData.fromJson((await api.get('/api/calendar?$q') as Map).cast());
   }

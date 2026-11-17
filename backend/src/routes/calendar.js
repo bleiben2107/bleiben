@@ -64,6 +64,9 @@ const bookingBar = (b) => ({
   check_in: b.check_in,
   check_out: b.check_out,
   balance: Math.max(0, (b.total ?? 0) - (b.paid ?? 0)),
+  hold_expires_at: b.status === "held" ? b.hold_expires_at : null,
+  imported: !!b.imported,
+  external_block: !!b.external_block,
 });
 
 /**

@@ -164,5 +164,51 @@ export function accountRouter(db, { mailer, sms }) {
     }),
   );
 
+  // ── Security: sessions and sign-in history (Settings → Security) ─────────
+  router.get("/sessions", async (req, res, next) => {
+    try {
+      const list = (await db.findDocs("sessions", { user_id: req.user.id })).sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+      const now = new Date().toISOString();
+      return res.json(list.slice(0, 50).map((s) => ({
+        id: s.id,
+        device: s.device,
+        ip: s.ip,
+        method: s.method,
+        created_at: s.created_at,
+        last_seen_at: s.last_seen_at,
+        active: !s.revoked_at && s.expires_at > now,
+        revoked_at: s.revoked_at,
+        current: s.sid === req.sessionId,
+      })));
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.delete("/sessions/:id", async (req, res, next) => {
+    try {
+      const s = await db.findDoc("sessions", { id: Number(req.params.id) });
+      if (!s || s.user_id !== req.user.id) return res.status(404).json({ detail: "Session not found" });
+      await db.updateDoc("sessions", { id: s.id }, { revoked_at: new Date().toISOString() });
+      return res.json({ signed_out: true, current: s.sid === req.sessionId });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  router.post("/sessions/sign-out-others", async (req, res, next) => {
+    try {
+      let n = 0;
+      for (const s of await db.findDocs("sessions", { user_id: req.user.id })) {
+        if (s.sid === req.sessionId || s.revoked_at) continue;
+        await db.updateDoc("sessions", { id: s.id }, { revoked_at: new Date().toISOString() });
+        n += 1;
+      }
+      return res.json({ signed_out: n });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
   return router;
 }

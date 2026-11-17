@@ -1,5 +1,5 @@
 import { can } from "../roles.js";
-import { readAccessToken } from "../security.js";
+import { readAccessSession } from "../security.js";
 
 export function requireUser(db) {
   return async (req, res, next) => {
@@ -9,8 +9,9 @@ export function requireUser(db) {
       return res.status(401).json({ detail: "Not authenticated" });
     }
     let userId;
+    let sid;
     try {
-      userId = readAccessToken(token);
+      ({ userId, sid } = readAccessSession(token));
     } catch {
       return res.status(401).json({ detail: "Invalid token" });
     }
@@ -18,6 +19,17 @@ export function requireUser(db) {
       const user = await db.findUserById(userId);
       if (!user) {
         return res.status(401).json({ detail: "User not found" });
+      }
+      if (sid) {
+        const session = await db.findDoc("sessions", { sid });
+        if (!session || session.user_id !== userId || session.revoked_at) {
+          return res.status(401).json({ detail: "You were signed out of this device" });
+        }
+        // Throttled "last active" update.
+        if (Date.now() - Date.parse(session.last_seen_at) > 5 * 60000) {
+          await db.updateDoc("sessions", { id: session.id }, { last_seen_at: new Date().toISOString(), ip: req.ip ?? session.ip });
+        }
+        req.sessionId = sid;
       }
       req.user = user;
       return next();

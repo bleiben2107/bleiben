@@ -3,6 +3,9 @@ import { createApp } from "./app.js";
 import { createDb, createMongoDb } from "./db.js";
 import { expireHolds } from "./routes/bookings.js";
 import { dispatchScheduled } from "./routes/messages.js";
+import { billingReminders } from "./routes/billing.js";
+import { syncDueConnections } from "./routes/channels.js";
+import { createMailer, createSmsSender } from "./messaging.js";
 
 let db;
 if (config.mongodbUri) {
@@ -27,6 +30,25 @@ setInterval(() => {
   // Scheduled guest messages (held if the booking changed).
   dispatchScheduled(db).catch((err) => console.error("[scheduled]", err.message));
 }, 60_000).unref();
+
+// iCal calendar sync (each connection every 30 min, backoff on errors) and
+// subscription reminders (trial/plan ending, read-only grace).
+const workerServices = { mailer: createMailer(), sms: createSmsSender() };
+let syncing = false;
+setInterval(async () => {
+  if (syncing) return;
+  syncing = true;
+  try {
+    await syncDueConnections(db, workerServices);
+  } catch (err) {
+    console.error("[ical]", err.message);
+  } finally {
+    syncing = false;
+  }
+}, 5 * 60_000).unref();
+setInterval(() => {
+  billingReminders(db, workerServices).catch((err) => console.error("[billing]", err.message));
+}, 60 * 60_000).unref();
 
 const green = (text) => `\x1b[32m${text}\x1b[0m`;
 const yellow = (text) => `\x1b[33m${text}\x1b[0m`;
