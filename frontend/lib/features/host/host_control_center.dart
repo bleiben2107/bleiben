@@ -11,7 +11,13 @@ import '../bookings/bookings_api.dart';
 import '../calendar/calendar_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../expenses/expenses_screen.dart';
+import '../billing/billing_screen.dart';
+import '../channels/channels_screen.dart';
 import '../inbox/inbox_screen.dart';
+import '../notifications/notifications_screen.dart';
+import '../settings/settings_screen.dart';
+import '../support/support_screen.dart';
+import '../auth/auth_models.dart';
 import '../reservations/reservations_screen.dart';
 import '../home/home_content.dart';
 import '../home/home_nav.dart';
@@ -26,7 +32,10 @@ import '../stays/stays_controller.dart';
 
 /// One entry in the Host Control Center nav (MVP plan §1 navigation).
 class HostSection {
-  const HostSection(this.key, this.label, this.icon, {this.permission, this.built = false, this.summary = const []});
+  const HostSection(this.key, this.label, this.icon, {this.permission, this.built = false, this.summary = const [], this.inNav = true});
+
+  /// Shown in the top nav (Settings, Billing and Help open from the right-hand icons).
+  final bool inNav;
 
   final String key;
   final String label;
@@ -61,16 +70,11 @@ const hostSections = [
     'Record payments, advance and balance',
   ]),
   HostSection('expenses', 'Expenses', Icons.account_balance_wallet_outlined, permission: 'expenses.read', built: true),
-  HostSection('inbox', 'Messages', Icons.forum_outlined, permission: 'messages.read', built: true),
-  HostSection('channels', 'Channel Manager', Icons.sync_alt_rounded, summary: [
-    'Connect Airbnb and Booking.com with iCal links',
-    'Export a calendar link for each room',
-    'Sync history, errors and conflicts',
-  ]),
-  HostSection('notifications', 'Notifications', Icons.notifications_none_rounded, summary: [
-    'Booking, payment and cancellation alerts',
-    'Email with SMS fallback, delivery status',
-  ]),
+  HostSection('inbox', 'Inbox', Icons.inbox_outlined, permission: 'notifications.read', built: true),
+  HostSection('channels', 'Channel Manager', Icons.sync_alt_rounded, permission: 'channels.read', built: true),
+  HostSection('settings', 'Settings', Icons.settings_outlined, permission: 'org.read', built: true, inNav: false),
+  HostSection('billing', 'Subscription & Billing', Icons.workspace_premium_outlined, permission: 'org.read', built: true, inNav: false),
+  HostSection('support', 'Help', Icons.help_outline_rounded, built: true, inNav: false),
 ];
 
 /// The logged-in host workspace (host.homeyhuts.com equivalent): top nav,
@@ -100,14 +104,29 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
   int _unread = 0;
   Timer? _unreadTimer;
 
+  Map<String, dynamic>? _plan;
+
+  /// Inbox badge = unread notifications + unread guest conversations.
   Future<void> _refreshUnread() async {
-    if (!(auth.activeMembership?.can('messages.read') ?? false)) return;
+    final m = auth.activeMembership;
+    if (m == null) return;
+    var n = 0;
+    for (final path in ['/api/notifications/unread-count', if (m.can('messages.read')) '/api/messages/unread-count']) {
+      try {
+        n += (((await widget.api.get(path)) as Map)['count'] as num).toInt();
+      } catch (_) {
+        // Badge is best-effort (e.g. guest messages not in the plan).
+      }
+    }
+    if (mounted && n != _unread) setState(() => _unread = n);
+  }
+
+  Future<void> _refreshPlan() async {
     try {
-      final r = await widget.api.get('/api/messages/unread-count');
-      final n = ((r as Map)['count'] as num).toInt();
-      if (mounted && n != _unread) setState(() => _unread = n);
+      final r = await widget.api.get('/api/billing');
+      if (mounted) setState(() => _plan = (r as Map).cast());
     } catch (_) {
-      // Badge is best-effort.
+      // Shown when available.
     }
   }
   late final PropertiesController _properties = PropertiesController(api: widget.api);
@@ -121,6 +140,7 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (auth.memberships.isEmpty) auth.ensureOrganization();
       _refreshUnread();
+      _refreshPlan();
     });
     _unreadTimer = Timer.periodic(const Duration(seconds: 60), (_) => _refreshUnread());
   }
@@ -179,6 +199,7 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
           api: _bookings,
           membership: m,
           hostName: auth.displayName,
+          onCreateProperty: () => openWizard(),
           onOpenSection: (k) => setState(() => _section = k),
           onAddExpense: () => setState(() {
             _section = 'expenses';
@@ -186,13 +207,18 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
             _expenseOpens++;
           }),
         ),
-      'inbox' => InboxScreen(
+      'inbox' => _InboxHub(
           key: ValueKey('inbox-${m.orgId}'),
           api: widget.api,
           bookings: _bookings,
           membership: m,
+          inboxInPlan: (_plan?['features'] as List?)?.contains('inbox') ?? true,
           onUnreadChanged: _refreshUnread,
         ),
+      'channels' => ChannelsScreen(key: ValueKey('channels-${m.orgId}'), api: widget.api, bookings: _bookings, membership: m),
+      'settings' => SettingsScreen(key: ValueKey('settings-${m.orgId}'), api: widget.api, auth: auth, membership: m),
+      'billing' => BillingScreen(key: ValueKey('billing-${m.orgId}'), api: widget.api, membership: m, onChanged: _refreshPlan),
+      'support' => const SupportScreen(),
       'expenses' => ExpensesScreen(
           key: ValueKey('expenses-${m.orgId}-$_expenseOpens'),
           api: widget.api,
@@ -225,11 +251,14 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
               _HostTopBar(
                 selected: _section,
                 unread: _unread,
+                plan: _plan,
                 initial: name.isEmpty ? null : name[0].toUpperCase(),
                 onSelect: (key) => setState(() => _section = key),
                 onLogo: () => Navigator.of(context).maybePop(),
                 onMenu: _openMenu,
               ),
+              if (_plan != null && ['grace', 'expired'].contains(_plan!['status']))
+                _PlanBanner(plan: _plan!, onOpen: () => setState(() => _section = 'billing')),
               Expanded(
                 child: auth.activeMembership == null
                     ? const Center(child: CircularProgressIndicator())
@@ -251,6 +280,7 @@ class _HostTopBar extends StatelessWidget {
   const _HostTopBar({
     required this.selected,
     this.unread = 0,
+    this.plan,
     required this.initial,
     required this.onSelect,
     required this.onLogo,
@@ -259,6 +289,7 @@ class _HostTopBar extends StatelessWidget {
 
   final String selected;
   final int unread;
+  final Map<String, dynamic>? plan;
   final String? initial;
   final ValueChanged<String> onSelect;
   final VoidCallback onLogo;
@@ -286,7 +317,7 @@ class _HostTopBar extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    for (final s in hostSections)
+                    for (final s in hostSections.where((s) => s.inNav))
                       _NavItem(
                         section: s,
                         selected: s.key == selected,
@@ -298,12 +329,37 @@ class _HostTopBar extends StatelessWidget {
                 ),
               ),
             ),
+            // Full chip only on very wide screens so the nav never scrolls; an icon otherwise.
+            if (plan != null && MediaQuery.sizeOf(context).width >= 1500)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: ActionChip(
+                  key: const Key('plan-chip'),
+                  avatar: const Icon(Icons.workspace_premium_outlined, size: 16),
+                  label: Text(_planLabel(plan!)),
+                  onPressed: () => onSelect('billing'),
+                ),
+              )
+            else if (plan != null)
+              IconButton(
+                key: const Key('plan-chip'),
+                tooltip: _planLabel(plan!),
+                color: ['grace', 'expired'].contains(plan!['status']) ? AppTheme.danger : selected == 'billing' ? AppTheme.forest : null,
+                onPressed: () => onSelect('billing'),
+                icon: const Icon(Icons.workspace_premium_outlined),
+              ),
             IconButton(
               tooltip: 'Help',
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Need help? Write to team@bleiben.co.in')),
-              ),
+              color: selected == 'support' ? AppTheme.forest : null,
+              onPressed: () => onSelect('support'),
               icon: const Icon(Icons.help_outline_rounded),
+            ),
+            IconButton(
+              key: const Key('open-settings'),
+              tooltip: 'Settings',
+              color: selected == 'settings' ? AppTheme.forest : null,
+              onPressed: () => onSelect('settings'),
+              icon: const Icon(Icons.settings_outlined),
             ),
             const SizedBox(width: 6),
             AccountMenuButton(onPressed: onMenu, initial: initial),
@@ -400,6 +456,88 @@ class _NoAccess extends StatelessWidget {
     return Center(
       child: Text("Your role doesn't include this section. Ask an owner or manager for access.",
           textAlign: TextAlign.center, style: AppFonts.sans(color: HomeColors.muted)),
+    );
+  }
+}
+
+String _planLabel(Map<String, dynamic> p) {
+  final ends = p['status_ends'] == null ? null : DateTime.parse(p['status_ends'] as String).difference(DateTime.now()).inDays + 1;
+  return switch (p['status']) {
+    'trialing' => 'Trial · ${ends ?? 0} day${ends == 1 ? '' : 's'} left',
+    'grace' => 'Read-only · renew',
+    'expired' => 'Expired · renew',
+    _ => '${p['plan_name']}',
+  };
+}
+
+class _PlanBanner extends StatelessWidget {
+  const _PlanBanner({required this.plan, required this.onOpen});
+
+  final Map<String, dynamic> plan;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final expired = plan['status'] == 'expired';
+    return Container(
+      key: const Key('plan-banner'),
+      width: double.infinity,
+      color: expired ? AppTheme.dangerSoft : AppTheme.warningSoft,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+      child: Row(children: [
+        Icon(Icons.lock_clock_outlined, color: expired ? AppTheme.danger : AppTheme.warningInk),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            expired
+                ? 'Your subscription has expired. Everything is read-only and your booking page is closed to new bookings.'
+                : 'Your ${plan['reason'] == 'trial_ended' ? 'free trial has ended' : 'plan needs renewing'}. You can view everything, but changes are paused.',
+            style: AppFonts.sans(fontWeight: FontWeight.w500, color: expired ? AppTheme.danger : AppTheme.warningInk),
+          ),
+        ),
+        TextButton(onPressed: onOpen, child: const Text('Choose a plan')),
+      ]),
+    );
+  }
+}
+
+/// Inbox: R1 notifications plus (when the plan includes it) guest conversations.
+class _InboxHub extends StatelessWidget {
+  const _InboxHub({super.key, required this.api, required this.bookings, required this.membership, required this.inboxInPlan, required this.onUnreadChanged});
+
+  final ApiClient api;
+  final BookingsApi bookings;
+  final Membership membership;
+  final bool inboxInPlan;
+  final VoidCallback onUnreadChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final wide = MediaQuery.sizeOf(context).width >= 900;
+    final messages = membership.can('messages.read');
+    return DefaultTabController(
+      length: messages ? 2 : 1,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(wide ? 32 : 12, 14, wide ? 32 : 12, 0),
+          child: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [
+            const Tab(text: 'Notifications'),
+            if (messages) const Tab(text: 'Guest messages'),
+          ]),
+        ),
+        Expanded(
+          child: TabBarView(children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(wide ? 32 : 12, 14, wide ? 32 : 12, 0),
+              child: NotificationsScreen(api: api, bookings: bookings, membership: membership, onChanged: onUnreadChanged),
+            ),
+            if (messages)
+              inboxInPlan
+                  ? InboxScreen(api: api, bookings: bookings, membership: membership, onUnreadChanged: onUnreadChanged)
+                  : Center(child: Text('Guest messages are part of the Growth plan.', style: AppFonts.sans(color: AppTheme.muted))),
+          ]),
+        ),
+      ]),
     );
   }
 }

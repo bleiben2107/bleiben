@@ -88,6 +88,9 @@ class _CreateBookingDialogState extends State<_CreateBookingDialog> {
   String _source = 'phone';
   String _method = 'cash';
   bool _hold = false;
+
+  /// Enquiry: records interest without blocking the dates.
+  bool _inquiry = false;
   Map<String, dynamic>? _quote;
   String? _error;
   bool _saving = false;
@@ -174,9 +177,10 @@ class _CreateBookingDialogState extends State<_CreateBookingDialog> {
         'children': _children,
         'source': _source,
         'notes': _notes.text.trim(),
-        if (_hold) 'hold': true,
+        if (_inquiry) 'inquiry': true,
+        if (_hold && !_inquiry) 'hold': true,
         if (_total.text.trim().isNotEmpty) 'total': double.parse(_total.text.trim()),
-        if (!_hold && advance > 0) 'payment': {'amount': advance, 'method': _method},
+        if (!_hold && !_inquiry && advance > 0) 'payment': {'amount': advance, 'method': _method},
       });
       if (mounted) Navigator.of(context).pop(b);
     } catch (e) {
@@ -284,13 +288,25 @@ class _CreateBookingDialogState extends State<_CreateBookingDialog> {
                         ),
                         const SizedBox(height: 12),
                         SwitchListTile(
+                          key: const Key('booking-inquiry'),
+                          contentPadding: EdgeInsets.zero,
+                          value: _inquiry,
+                          onChanged: (v) => setState(() {
+                            _inquiry = v;
+                            if (v) _hold = false;
+                          }),
+                          title: const Text('Save as enquiry'),
+                          subtitle: const Text("Records the guest's interest without blocking the dates. Confirm it later."),
+                        ),
+                        if (!_inquiry)
+                        SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           value: _hold,
                           onChanged: (v) => setState(() => _hold = v),
                           title: const Text('Hold for 15 minutes'),
                           subtitle: const Text('Keeps the dates while the guest pays; releases automatically.'),
                         ),
-                        if (!_hold)
+                        if (!_hold && !_inquiry)
                           Row(children: [
                             Expanded(
                               child: TextFormField(
@@ -338,8 +354,8 @@ class _CreateBookingDialogState extends State<_CreateBookingDialog> {
           width: 170,
           child: ElevatedButton(
             key: const Key('save-booking'),
-            onPressed: _saving || catalog == null || catalog.isEmpty || !available ? null : _save,
-            child: Text(_saving ? 'Saving…' : _hold ? 'Hold dates' : 'Create booking'),
+            onPressed: _saving || catalog == null || catalog.isEmpty || (!available && !_inquiry) ? null : _save,
+            child: Text(_saving ? 'Saving…' : _inquiry ? 'Save enquiry' : _hold ? 'Hold dates' : 'Create booking'),
           ),
         ),
       ],

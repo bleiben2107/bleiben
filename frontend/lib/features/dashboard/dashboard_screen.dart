@@ -41,6 +41,7 @@ class DashboardScreen extends StatefulWidget {
     required this.hostName,
     required this.onOpenSection,
     required this.onAddExpense,
+    this.onCreateProperty,
   });
 
   final BookingsApi api;
@@ -48,6 +49,9 @@ class DashboardScreen extends StatefulWidget {
   final String hostName;
   final ValueChanged<String> onOpenSection;
   final VoidCallback onAddExpense;
+
+  /// Opens the listing wizard (quick action "Create property").
+  final VoidCallback? onCreateProperty;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -126,6 +130,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
     final main = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (d['overview'] != null) ...[_overviews(d, width), const SizedBox(height: 18)],
       _kpis(d, width),
       const SizedBox(height: 18),
       _twoUp(wide || width >= 900, _sources(d), _money(d)),
@@ -216,7 +221,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Wrap(spacing: 10, runSpacing: 10, children: [
       if (m.can('bookings.write')) tile('Add direct booking', 'Offline or phone booking', Icons.add_box_outlined, _addBooking, const Key('qa-booking')),
       if (m.can('expenses.write')) tile('Add expenses', 'Record a new cost', Icons.receipt_long_outlined, widget.onAddExpense, const Key('qa-expense')),
+      if (m.can('properties.write') && widget.onCreateProperty != null)
+        tile('Create property', 'Add a homestay, villa or cottage', Icons.add_home_outlined, widget.onCreateProperty, const Key('qa-create-property')),
       tile('Properties', 'Manage listings and rates', Icons.holiday_village_outlined, () => widget.onOpenSection('properties'), const Key('qa-properties')),
+      if (m.can('calendar.read'))
+        tile('Open calendar', 'Availability, prices and holds', Icons.calendar_month_outlined, () => widget.onOpenSection('calendar'), const Key('qa-calendar')),
+      if (m.can('calendar.write'))
+        tile('Block dates', 'Select dates in the calendar', Icons.block, () => widget.onOpenSection('calendar'), const Key('qa-block')),
+      if (m.can('bookings.read'))
+        tile('View reservations', 'Every booking in one list', Icons.event_available_outlined, () => widget.onOpenSection('reservations'), const Key('qa-reservations')),
       if (m.can('expenses.read'))
         tile('Manage expenses', 'Full history and reports', Icons.account_balance_wallet_outlined, () => widget.onOpenSection('expenses'), const Key('qa-expenses')),
     ]);
@@ -307,6 +320,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
         style: AppFonts.sans(fontSize: 12.5, fontWeight: FontWeight.w600, color: color));
   }
 
+  /// Booking, payment and property overviews (MVP plan §2.1).
+  Widget _overviews(Map<String, dynamic> d, double width) {
+    final o = (d['overview'] as Map).cast<String, dynamic>();
+    final p = (d['payments'] as Map).cast<String, dynamic>();
+    final inv = (d['inventory'] as Map).cast<String, dynamic>();
+    final src = (o['by_source'] as Map).cast<String, dynamic>();
+    Widget stat(String label, String value, {Color? color, Key? key}) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(children: [
+            Expanded(child: Text(label, style: AppFonts.sans(color: AppTheme.muted, fontSize: 13.5))),
+            Text(value, key: key, style: AppFonts.sans(fontWeight: FontWeight.w700, color: color)),
+          ]),
+        );
+    final cards = [
+      _card(
+        key: const Key('booking-overview'),
+        title: 'Bookings',
+        help: 'In the selected period',
+        child: Column(children: [
+          stat('Total reservations', '${o['total']}', key: const Key('ov-total')),
+          stat('Booked today', '${o['booked_today']}'),
+          stat('Upcoming stays', '${o['upcoming']}'),
+          stat('Confirmed', '${o['confirmed']}', color: AppTheme.success),
+          stat('Pending', '${o['pending']}', color: AppTheme.warningInk),
+          stat('Cancelled', '${o['cancelled']}', color: AppTheme.danger),
+          stat('Direct · OTA · Manual', '${src['direct']} · ${src['ota']} · ${src['manual']}'),
+        ]),
+      ),
+      _card(
+        key: const Key('payment-overview'),
+        title: 'Payments',
+        help: 'In the selected period',
+        child: Column(children: [
+          stat('Total booking value', money(p['booking_value'] as num)),
+          stat('Advance collected', money(p['collected'] as num), color: AppTheme.success),
+          stat('Pending balances', money(p['pending_balance'] as num), color: AppTheme.warningInk),
+          stat('Paid online', money(p['online_paid'] as num)),
+          stat('Failed payments', '${p['failed_count']}${(p['failed_count'] as num) > 0 ? ' · ${money(p['failed_amount'] as num)}' : ''}',
+              color: (p['failed_count'] as num) > 0 ? AppTheme.danger : null),
+        ]),
+      ),
+      _card(
+        key: const Key('property-overview'),
+        title: 'Properties today',
+        help: '${inv['properties']} properties · ${inv['rooms']} rooms · ${inv['units']} units',
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          stat('Available units', '${inv['available']}', color: AppTheme.success),
+          stat('Booked units', '${inv['booked']}'),
+          stat('Blocked units', '${inv['blocked']}', color: AppTheme.muted),
+          const Divider(height: 16),
+          for (final r in (inv['by_property'] as List).cast<Map>().take(5))
+            stat('${r['title']}', '${r['available']} of ${r['units']} free'),
+        ]),
+      ),
+    ];
+    final cols = width >= 1150 ? 3 : width >= 700 ? 2 : 1;
+    return LayoutBuilder(builder: (context, c) {
+      final w = (c.maxWidth - (cols - 1) * 12) / cols;
+      return Wrap(spacing: 12, runSpacing: 12, children: [for (final card in cards) SizedBox(width: w, child: card)]);
+    });
+  }
+
   Widget _kpis(Map<String, dynamic> d, double width) {
     final k = (d['kpis'] as Map).cast<String, Map>();
     Widget kpi(String title, String value, String sub, Widget change, String help, Key key) => Container(
@@ -356,13 +431,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'check_outs': "Today's check-outs",
       'ongoing': 'Ongoing stays',
       'arriving_soon': 'Arriving in next 2 days',
+      'pending_checkouts': 'Pending check-outs',
     };
     return _card(
       key: const Key('today-panel'),
       title: 'Today',
       trailing: Text(prettyDate(d['today'] as String), style: AppFonts.sans(color: AppTheme.muted)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        for (final e in rows.entries) ...[
+        for (final e in rows.entries.where((e) => t[e.key] != null)) ...[
           Row(children: [
             Expanded(child: Text(e.value, style: AppFonts.sans(fontWeight: FontWeight.w600))),
             Text('${t[e.key]!['count']}', style: AppFonts.sans(fontSize: 20, fontWeight: FontWeight.w700)),

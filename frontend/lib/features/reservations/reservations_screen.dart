@@ -40,6 +40,13 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
   final _search = TextEditingController();
   String _tab = 'all';
   String _source = 'all';
+  String _status = 'all';
+  int? _propertyId;
+  int? _roomId;
+
+  /// 'bookings' or 'guests'.
+  String _view = 'bookings';
+  List<({int id, String title, List<({int id, String name, int maxGuests})> rooms})> _catalog = const [];
   String _payment = 'all';
   String _sort = 'check_in';
   DateTimeRange? _checkIn;
@@ -54,6 +61,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
   void initState() {
     super.initState();
     _load();
+    widget.api.roomCatalog().then((c) {
+      if (mounted) setState(() => _catalog = c);
+    }).catchError((_) {});
   }
 
   @override
@@ -66,6 +76,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         'tab': _tab,
         'q': _search.text.trim(),
         'source': _source == 'all' ? '' : _source,
+        'status': _status == 'all' ? '' : _status,
+        'property_id': _propertyId == null ? '' : '$_propertyId',
+        'room_id': _roomId == null ? '' : '$_roomId',
         'payment': _payment == 'all' ? '' : _payment,
         'sort': _sort,
         'check_in_from': _checkIn == null ? '' : ymd(_checkIn!.start),
@@ -110,7 +123,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     if (changed == true) _load(page: _page);
   }
 
-  bool get _filtered => _source != 'all' || _payment != 'all' || _checkIn != null || _search.text.trim().isNotEmpty;
+  bool get _filtered => _source != 'all' || _status != 'all' || _propertyId != null || _roomId != null || _payment != 'all' || _checkIn != null || _search.text.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -121,6 +134,13 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       children: [
         Row(children: [
           Expanded(child: Text('Reservations', style: AppFonts.sans(fontSize: 24, fontWeight: FontWeight.w600))),
+          SegmentedButton<String>(
+            key: const Key('reservations-view'),
+            segments: const [ButtonSegment(value: 'bookings', label: Text('Bookings')), ButtonSegment(value: 'guests', label: Text('Guests'))],
+            selected: {_view},
+            onSelectionChanged: (v) => setState(() => _view = v.first),
+          ),
+          const SizedBox(width: 8),
           IconButton(tooltip: 'Export CSV', onPressed: _export, icon: const Icon(Icons.download_outlined)),
           if (_canBook)
             SizedBox(
@@ -134,6 +154,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
             ),
         ]),
         const SizedBox(height: 14),
+        if (_view == 'guests') GuestsView(api: widget.api, membership: widget.membership) else ...[
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(children: [
@@ -164,7 +185,18 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               decoration: const InputDecoration(hintText: 'Search guest, phone, email or booking ID', prefixIcon: Icon(Icons.search), isDense: true),
             ),
           ),
+          _dropdown('Property', '${_propertyId ?? ''}', {'': 'All properties', for (final p in _catalog) '${p.id}': p.title}, (v) {
+            _propertyId = int.tryParse(v);
+            _roomId = null;
+          }),
+          _dropdown('Room', '${_roomId ?? ''}', {
+            '': 'All rooms',
+            for (final p in _catalog)
+              if (_propertyId == null || p.id == _propertyId)
+                for (final r in p.rooms) '${r.id}': '${p.title} · ${r.name}',
+          }, (v) => _roomId = int.tryParse(v)),
           _dropdown('Booked via', _source, {'all': 'All channels', ...bookingSources}, (v) => _source = v),
+          _dropdown('Status', _status, {'all': 'Any status', ...statusLabels}, (v) => _status = v),
           _dropdown('Payment', _payment, _paymentFilters, (v) => _payment = v),
           _dropdown('Sort', _sort, const {'check_in': 'Check-in date', 'booked': 'Newest booked'}, (v) => _sort = v),
           OutlinedButton.icon(
@@ -189,6 +221,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               onPressed: () {
                 _search.clear();
                 _source = 'all';
+                _status = 'all';
+                _propertyId = null;
+                _roomId = null;
                 _payment = 'all';
                 _checkIn = null;
                 _load();
@@ -220,6 +255,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                 onPressed: d.page * d.pageSize < d.total ? () => _load(page: d.page + 1) : null,
                 icon: const Icon(Icons.chevron_right)),
           ]),
+        ],
         ],
       ],
     );
@@ -272,7 +308,10 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                 key: ValueKey(b.id),
                 onSelectChanged: (_) => _open(b),
                 cells: [
-                  DataCell(Text(b.code, style: AppFonts.sans(fontWeight: FontWeight.w600))),
+                  DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text(b.code, style: AppFonts.sans(fontWeight: FontWeight.w600)),
+                    if (b.imported) const Padding(padding: EdgeInsets.only(left: 6), child: Tooltip(message: 'Imported from a synced calendar', child: Icon(Icons.sync, size: 15, color: AppTheme.muted))),
+                  ])),
                   DataCell(Text(_tripLabels[b.tripStatus] ?? b.tripStatus)),
                   DataCell(Text('${prettyDate(b.checkIn, year: true)}\n${b.nights} night(s)')),
                   DataCell(ConstrainedBox(
@@ -322,4 +361,112 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
           ),
         ),
       );
+}
+
+
+/// Guest records built from bookings: contact, stays, nights, spend, history.
+class GuestsView extends StatefulWidget {
+  const GuestsView({super.key, required this.api, required this.membership});
+
+  final BookingsApi api;
+  final Membership membership;
+
+  @override
+  State<GuestsView> createState() => _GuestsViewState();
+}
+
+class _GuestsViewState extends State<GuestsView> {
+  final _q = TextEditingController();
+  Map<String, dynamic>? _d;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _q.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final r = await widget.api.api.get('/api/bookings/guests/list?q=${Uri.encodeQueryComponent(_q.text.trim())}');
+      if (mounted) setState(() => _d = (r as Map).cast());
+    } catch (e) {
+      if (mounted) setState(() => _error = errorText(e));
+    }
+  }
+
+  Future<void> _open(Map g) async {
+    final r = (await widget.api.api.get('/api/bookings/guests/detail?key=${Uri.encodeQueryComponent(g['key'] as String)}') as Map).cast<String, dynamic>();
+    if (!mounted) return;
+    final bookings = [for (final b in r['bookings'] as List) Booking.fromJson((b as Map).cast())];
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('${r['name']}${r['repeat'] == true ? ' · repeat guest' : ''}'),
+        content: SizedBox(
+          width: 560,
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text([r['phone'], r['email']].where((x) => '$x'.isNotEmpty).join(' · ')),
+            Text('${r['stays']} stay(s) · ${r['nights']} night(s) · paid ${money(r['spent'] as num)} · via ${(r['sources'] as List).join(', ')}', style: AppFonts.sans(color: AppTheme.muted)),
+            const Divider(height: 20),
+            Flexible(
+              child: ListView(shrinkWrap: true, children: [
+                for (final b in bookings)
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('${b.code} · ${b.propertyTitle} · ${b.roomName}'),
+                    subtitle: Text('${prettyDate(b.checkIn, year: true)} → ${prettyDate(b.checkOut)} · ${money(b.total)}'),
+                    trailing: StatusPill(b.status),
+                    onTap: () => showBookingDetail(context, api: widget.api, bookingId: b.id, membership: widget.membership),
+                  ),
+              ]),
+            ),
+          ]),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = _d;
+    final items = ((d?['items'] as List?) ?? const []).cast<Map>();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: TextField(
+          key: const Key('guest-search'),
+          controller: _q,
+          onSubmitted: (_) => _load(),
+          decoration: const InputDecoration(hintText: 'Search guest name, phone or email', prefixIcon: Icon(Icons.search), isDense: true),
+        ),
+      ),
+      const SizedBox(height: 12),
+      if (d == null) Center(child: _error != null ? Text(_error!) : const CircularProgressIndicator()),
+      if (d != null && items.isEmpty) Padding(padding: const EdgeInsets.all(30), child: Center(child: Text('No guests yet. Guests appear here once they book.', style: AppFonts.sans(color: AppTheme.muted)))),
+      for (final g in items)
+        Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            key: Key('guest-${g['key']}'),
+            onTap: () => _open(g),
+            leading: CircleAvatar(backgroundColor: AppTheme.sand, child: Text('${g['name']}'.isEmpty ? '?' : '${g['name']}'[0].toUpperCase())),
+            title: Text('${g['name']}${g['repeat'] == true ? '  ·  repeat guest' : ''}'),
+            subtitle: Text('${[g['phone'], g['email']].where((x) => '$x'.isNotEmpty).join(' · ')}\n'
+                '${g['bookings']} booking(s) · ${g['stays']} stay(s) · ${g['nights']} night(s)${g['last_stay'] != null ? ' · last stay ${prettyDate(g['last_stay'] as String, year: true)}' : ''}'),
+            isThreeLine: true,
+            trailing: Text(money(g['spent'] as num), style: AppFonts.sans(fontWeight: FontWeight.w700)),
+          ),
+        ),
+      if (d != null) Text('${d['total']} guest(s)', style: AppFonts.sans(color: AppTheme.muted)),
+    ]);
+  }
 }

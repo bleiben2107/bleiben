@@ -52,6 +52,17 @@ export const config = {
     maxAttempts: Number(process.env.OTP_MAX_ATTEMPTS || 5),
   },
   inviteTtlDays: Number(process.env.INVITE_TTL_DAYS || 7),
+
+  // Bleiben's own Razorpay account for owner subscriptions (not the owners' gateways).
+  billing: {
+    razorpayKeyId: process.env.BILLING_RAZORPAY_KEY_ID || "",
+    razorpayKeySecret: process.env.BILLING_RAZORPAY_KEY_SECRET || "",
+  },
+
+  // Public URL of this API, used in iCal export links and webhook URLs.
+  apiBaseUrl: (process.env.API_BASE_URL || `http://127.0.0.1:${process.env.PORT || 8000}`).replace(/\/+$/, ""),
+  // Allow iCal feeds on localhost / private networks (tests and local dev only).
+  allowPrivateIcal: process.env.ALLOW_PRIVATE_ICAL === "1",
 };
 
 const LOCAL_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;

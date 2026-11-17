@@ -193,7 +193,7 @@ export function authRouter(db, { mailer, sms }) {
         created_at: nowIso(),
       });
       const joined = await ensureOrganization(db, user, req.body?.invite_token);
-      return res.status(201).json(await sessionResponse(db, user, { is_new_user: true, ...joined }));
+      return res.status(201).json(await sessionResponse(db, user, { is_new_user: true, ...joined }, req));
     }),
   );
 
@@ -246,7 +246,7 @@ export function authRouter(db, { mailer, sms }) {
         user = await db.updateDoc("users", { id: user.id }, { [verifiedField]: true });
       }
       const joined = await ensureOrganization(db, user, req.body?.invite_token);
-      return res.json(await sessionResponse(db, user, joined));
+      return res.json(await sessionResponse(db, user, joined, req));
     }),
   );
 

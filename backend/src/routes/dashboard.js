@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { DATE_RE, InputError, OFFLINE_SOURCES, SOURCES, addDays, nights, orgRooms, todayStr } from "../bookings/core.js";
+import { DATE_RE, InputError, OFFLINE_SOURCES, SOURCES, addDays, nights, orgRooms, roomNights, todayStr } from "../bookings/core.js";
 import { fileRecurring } from "./expenses.js";
 
 /**
@@ -94,7 +94,7 @@ export function dashboardRouter(db) {
       const allProps = (await db.findDocs("properties", { org_id: orgId })).filter((p) => p.status !== "deleted");
       const cities = [...new Set(allProps.map((p) => p.address?.city).filter(Boolean))].sort();
 
-      const bookings = (await db.findDocs("bookings", { org_id: orgId })).filter((b) => propIds.has(b.property_id));
+      const bookings = (await db.findDocs("bookings", { org_id: orgId })).filter((b) => propIds.has(b.property_id) && !b.external_block);
       await fileRecurring(db, orgId);
       const expenses = (await db.findDocs("expenses", { org_id: orgId })).filter((e) => propIds.has(e.property_id));
 
@@ -156,6 +156,8 @@ export function dashboardRouter(db) {
         check_outs: live.filter((b) => b.check_out === today),
         ongoing: live.filter((b) => b.status === "checked_in" || (b.check_in < today && b.check_out > today && b.status !== "checked_out")),
         arriving_soon: live.filter((b) => b.check_in > today && b.check_in <= addDays(today, 2)),
+        // Checked in and due out today or earlier, not yet checked out.
+        pending_checkouts: bookings.filter((b) => b.status === "checked_in" && b.check_out <= today),
       };
       const todayOut = Object.fromEntries(Object.entries(todayLists).map(([k, list]) => [k, { count: list.length, items: list.slice(0, 5).map(brief) }]));
 
@@ -253,8 +255,61 @@ export function dashboardRouter(db) {
       const holds = bookings.filter((b) => b.status === "held").length;
       if (holds) alerts.push({ kind: "holds", count: holds, text: `${holds} date hold${holds === 1 ? "" : "s"} waiting for payment` });
 
+      // Booking overview (MVP plan §2.1) for the selected period.
+      const OTA = ["airbnb", "booking_com", "makemytrip", "goibibo", "agoda", "vrbo", "ical"];
+      const inPeriod = bookings.filter((b) => inRange(keyDate(b), range));
+      const overview = {
+        total: inPeriod.length,
+        booked_today: bookings.filter((b) => String(b.created_at).slice(0, 10) === today).length,
+        upcoming: bookings.filter((b) => OCCUPYING.includes(b.status) && b.status !== "checked_out" && b.check_in > today).length,
+        confirmed: inPeriod.filter((b) => ["confirmed", "checked_in", "checked_out"].includes(b.status)).length,
+        pending: inPeriod.filter((b) => ["pending_payment", "held", "inquiry"].includes(b.status)).length,
+        cancelled: inPeriod.filter((b) => ["cancelled", "no_show", "expired"].includes(b.status)).length,
+        by_source: {
+          direct: inPeriod.filter((b) => b.source === "direct").length,
+          ota: inPeriod.filter((b) => OTA.includes(b.source)).length,
+          manual: inPeriod.filter((b) => OFFLINE_SOURCES.includes(b.source)).length,
+        },
+      };
+
+      // Payment overview.
+      const valued = inPeriod.filter((b) => EARNING.includes(b.status));
+      const attempts = (await db.findDocs("payment_attempts", { org_id: orgId })).filter((a) => inRange(String(a.created_at).slice(0, 10), range));
+      const failed = attempts.filter((a) => a.status === "failed");
+      const payments = {
+        booking_value: round(valued.reduce((s, b) => s + b.total, 0)),
+        collected: round(valued.reduce((s, b) => s + Math.max(0, paidOf(b)), 0)),
+        pending_balance: round(bookings.filter((b) => ["pending_payment", "confirmed", "checked_in"].includes(b.status)).reduce((s, b) => s + Math.max(0, b.total - paidOf(b)), 0)),
+        failed_count: failed.length,
+        failed_amount: round(failed.reduce((s, a) => s + a.amount, 0)),
+        online_paid: round(attempts.filter((a) => a.status === "paid").reduce((s, a) => s + a.amount, 0)),
+      };
+
+      // Property / inventory overview for today.
+      const inventory = { properties: propIds.size, rooms: rooms.length, units: unitsTotal, available: 0, booked: 0, blocked: 0, by_property: [] };
+      const byProp = new Map();
+      for (const { room, property } of rooms) {
+        const [n] = await roomNights(db, room, property, today, addDays(today, 1));
+        const blocked = n.blocked ? n.units : 0;
+        const booked = n.blocked ? 0 : Math.min(n.units, n.booked);
+        const available = n.available;
+        inventory.available += available;
+        inventory.booked += booked;
+        inventory.blocked += blocked;
+        const row = byProp.get(property.id) ?? { id: property.id, title: property.title || "Untitled property", units: 0, available: 0, booked: 0, blocked: 0 };
+        row.units += n.units;
+        row.available += available;
+        row.booked += booked;
+        row.blocked += blocked;
+        byProp.set(property.id, row);
+      }
+      inventory.by_property = [...byProp.values()];
+
       return res.json({
         today,
+        overview,
+        payments,
+        inventory,
         range: { ...range, count_by: countBy },
         filters: { cities, properties: allProps.map((p) => ({ id: p.id, title: p.title || "Untitled property", city: p.address?.city ?? "" })) },
         totals: { properties: propIds.size, units: unitsTotal },

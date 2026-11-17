@@ -4,6 +4,7 @@ import { Router } from "express";
 import { config } from "../config.js";
 import { can } from "../roles.js";
 import { savePhoto } from "../uploads.js";
+import { assertWithinLimits } from "../billing/subscription.js";
 
 const nowIso = () => new Date().toISOString();
 
@@ -133,7 +134,8 @@ function publicProperty(p, extra = {}) {
     propertySerialId: v("propertySerialId", "property_serial_id", ""),
     status: p.status ?? "draft",
     slug: p.slug ?? null,
-    booking_url: p.slug ? `${config.appBaseUrl}/p/${p.slug}` : null,
+    // "#/" form works on any static host (no server rewrites needed); /p/<slug> also works where rewrites exist.
+    booking_url: p.slug ? `${config.appBaseUrl}/#/p/${p.slug}` : null,
     setupMethod: v("setupMethod", "setup_method", "manual"),
     airbnbUrl: v("airbnbUrl", "airbnb_url", null),
     current_step: p.current_step ?? "property_type",
@@ -321,6 +323,7 @@ export function propertiesRouter(db) {
       return await fn(req, res);
     } catch (err) {
       if (err instanceof InputError) return res.status(400).json({ detail: err.message });
+      if (err?.status === 402) return res.status(402).json({ code: "plan_limit", detail: err.message });
       return next(err);
     }
   };
@@ -395,6 +398,7 @@ export function propertiesRouter(db) {
     "/",
     handle(async (req, res) => {
       const input = normalizeInput(req.body);
+      if (req.scope.org_id != null) await assertWithinLimits(db, req.scope.org_id, { addProperties: 1 });
       const now = nowIso();
       const saved = await db.insertDoc("properties", {
         ...structuredClone(DEFAULTS),
@@ -548,6 +552,10 @@ export function propertiesRouter(db) {
     handle(async (req, res) => {
       const property = await findScopedProperty(req.params.id, req);
       if (!property) return res.status(404).json({ detail: "Original property not found" });
+      if (req.scope.org_id != null) {
+        const units = (await activeRooms(property.id)).reduce((n, r) => n + (r.unitCount ?? 1), 0);
+        await assertWithinLimits(db, req.scope.org_id, { addProperties: 1, addUnits: units });
+      }
       const now = nowIso();
       const copy = structuredClone(property);
       for (const k of ["id", "slug", "published_at", "deleted_at"]) delete copy[k];
@@ -608,6 +616,7 @@ export function propertiesRouter(db) {
       if ((await activeRooms(property.id)).some((r) => r.name.toLowerCase() === input.name.toLowerCase())) {
         return res.status(409).json({ detail: `A room called "${input.name}" already exists` });
       }
+      if (req.scope.org_id != null) await assertWithinLimits(db, req.scope.org_id, { addUnits: input.unitCount ?? 1 });
       const now = nowIso();
       const room = await db.insertDoc("rooms", {
         ...input,
@@ -638,6 +647,11 @@ export function propertiesRouter(db) {
       if (req.body?.status !== undefined) {
         if (!["active", "archived"].includes(req.body.status)) return res.status(400).json({ detail: "Status must be active or archived" });
         input.status = req.body.status;
+      }
+      if (req.scope.org_id != null) {
+        const before = room.status === "archived" ? 0 : room.unitCount ?? 1;
+        const after = (input.status ?? room.status) === "archived" ? 0 : input.unitCount ?? room.unitCount ?? 1;
+        if (after > before) await assertWithinLimits(db, req.scope.org_id, { addUnits: after - before });
       }
       const updated = await db.updateDoc("rooms", { id: room.id }, { ...input, updated_at: nowIso() });
       await log(property, req, "room_updated", { fields: [updated.name] });

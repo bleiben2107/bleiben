@@ -89,13 +89,15 @@ export const SOURCES = {
   makemytrip: "MakeMyTrip",
   goibibo: "Goibibo",
   agoda: "Agoda",
+  vrbo: "Vrbo",
+  ical: "Other calendar",
   phone: "Phone",
   whatsapp: "WhatsApp",
   walk_in: "Walk-in",
   manual: "Manual",
 };
 export const OFFLINE_SOURCES = ["phone", "whatsapp", "walk_in", "manual"];
-export const PAYMENT_METHODS = ["cash", "upi", "card", "bank_transfer", "payment_link", "ota"];
+export const PAYMENT_METHODS = ["cash", "upi", "card", "bank_transfer", "payment_link", "ota", "online"];
 
 export const bookingCode = () => `BLB-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
 
