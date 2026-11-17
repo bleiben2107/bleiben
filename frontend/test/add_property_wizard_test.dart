@@ -68,7 +68,7 @@ void main() {
 
     // 8. Verify Step 4 is Figma 17:139 ("Add your property address")
     expect(find.text('Add your property address'), findsOneWidget);
-    expect(find.text('Pin placed accurately'), findsOneWidget);
+    expect(find.text('Type your address to place the pin'), findsOneWidget);
     expect(find.text('Enter Your Address'), findsOneWidget);
     await tester.enterText(
         find.byType(TextField).first, 'Lonavala, Maharashtra');

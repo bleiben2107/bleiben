@@ -11,7 +11,7 @@ import 'auth_models.dart';
 enum _Mode { login, signup }
 
 /// Passwordless auth, matching the reference flow:
-/// * Log in — one "Email or phone number" field, OTP by email (or SMS).
+/// * Log in — email field, OTP by email (phone login is off for now).
 /// * Sign up — full name + email (required) + phone (optional), OTP by email.
 /// The account is only created once the emailed OTP is verified.
 class LoginScreen extends StatefulWidget {
@@ -239,22 +239,13 @@ class _LoginScreenState extends State<LoginScreen> {
           controller: _identifierCtrl,
           autofocus: true,
           keyboardType: TextInputType.emailAddress,
-          autofillHints: const [
-            AutofillHints.email,
-            AutofillHints.telephoneNumber
-          ],
-          decoration:
-              const InputDecoration(labelText: 'Email or phone number *'),
+          autofillHints: const [AutofillHints.email],
+          // Phone login is switched off for now; email only.
+          decoration: const InputDecoration(labelText: 'Email *'),
           onFieldSubmitted: (_) => _requestOtp(),
           validator: (v) {
             final value = (v ?? '').trim();
-            if (value.isEmpty) return 'Email or phone number is required';
-            final digits = value.replaceAll(RegExp(r'[\s-]'), '');
-            if (RegExp(r'^\+?\d+$').hasMatch(digits)) {
-              return digits.replaceAll('+', '').length >= 10
-                  ? null
-                  : 'Enter a valid phone number';
-            }
+            if (value.isEmpty) return 'Email is required';
             return _emailRe.hasMatch(value) ? null : 'Enter a valid email';
           },
         )
@@ -368,16 +359,6 @@ class _LoginScreenState extends State<LoginScreen> {
         style: TextStyle(
             fontSize: 14.5, color: AppTheme.ink.withValues(alpha: 0.7)),
       ),
-      if (!viaSms)
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(
-            'From team@bleiben.co.in — check spam if you don’t see it.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                fontSize: 12.5, color: AppTheme.ink.withValues(alpha: 0.5)),
-          ),
-        ),
       if (sent.devCode != null)
         Container(
           margin: const EdgeInsets.only(top: 12),

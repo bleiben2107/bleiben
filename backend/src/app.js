@@ -40,6 +40,7 @@ export function createApp(db, services = {}) {
   app.use("/api/account/avatar", express.json({ limit: "8mb" }));
   app.use("/api/expenses/attachments", express.json({ limit: "8mb" }));
   app.use("/api/settings/organization/logo", express.json({ limit: "8mb" }));
+  app.use(/^\/api\/properties\/\d+\/photos$/, express.json({ limit: "8mb" }));
   // Razorpay webhooks are verified against the raw body.
   app.use("/api/public/payments/razorpay", express.raw({ type: "*/*", limit: "1mb" }));
   app.use(express.json({ limit: "100kb" }));

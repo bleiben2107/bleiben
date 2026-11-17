@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:bleiben/core/theme/app_fonts.dart';
 
 import '../../core/network/api_client.dart';
@@ -152,6 +154,18 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
     super.dispose();
   }
 
+  String? _urlSection;
+
+  /// Keeps the address bar at #/host/<section> so a refresh reopens this section.
+  void _syncUrl() {
+    if (!kIsWeb || _urlSection == _section) return;
+    if (!(ModalRoute.of(context)?.settings.name ?? '').startsWith('/host')) return;
+    _urlSection = _section;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SystemNavigator.routeInformationUpdated(uri: Uri.parse('/host/$_section'), replace: true);
+    });
+  }
+
   bool _allowed(HostSection s) =>
       s.permission == null || (auth.activeMembership?.can(s.permission!) ?? false);
 
@@ -243,6 +257,7 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
       animation: auth,
       builder: (context, _) {
         final section = hostSections.firstWhere((s) => s.key == _section);
+        _syncUrl();
         final name = auth.displayName.trim();
         return Scaffold(
           backgroundColor: AppTheme.paper,
