@@ -2,7 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:bleiben/core/theme/app_theme.dart';
 import 'package:bleiben/core/theme/app_fonts.dart';
 
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:image_picker/image_picker.dart';
+
+import '../../core/config/api_config.dart';
 import '../../core/network/api_client.dart';
+import '../../core/util/geocode.dart';
+import '../../core/util/osm_map.dart';
 import '../../core/storage/session_store.dart';
 import '../home/home_content.dart';
 import '../home/home_overlays.dart';
@@ -74,6 +82,17 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
 
   // Step 4: Address & Location
   final _locationController = TextEditingController();
+
+  // Map pin for the address step (OpenStreetMap).
+  double? _lat;
+  double? _lon;
+  Timer? _geoTimer;
+  bool _locating = false;
+  String? _geoMessage;
+  final _geocoder = Geocoder();
+
+  // Photo uploads from the device.
+  int _uploading = 0;
   final _streetController = TextEditingController();
   final _aptController = TextEditingController();
   final _cityController = TextEditingController();
@@ -198,6 +217,8 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
     _draftPropertySerialId = draft.propertySerialId;
     _titleController.text = draft.title;
     _locationController.text = draft.location;
+    _lat = (draft.address['lat'] as num?)?.toDouble();
+    _lon = (draft.address['lng'] as num?)?.toDouble();
     _descriptionController.text = draft.description;
     _propertyType = draft.propertyType;
     _accommodationType = draft.accommodationType;
@@ -248,6 +269,8 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
         'state': _stateController.text.trim(),
         'postalCode': _postalCodeController.text.trim(),
         'country': _countryController.text.trim(),
+        if (_lat != null && _lon != null) 'lat': _lat,
+        if (_lat != null && _lon != null) 'lng': _lon,
       },
       photos: List<String>.from(_photos),
       coverPhoto: _coverPhoto ?? (_photos.isNotEmpty ? _photos.first : null),
@@ -363,6 +386,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
     _videoUrlController.dispose();
     _neighbourhoodController.dispose();
     _locationController.dispose();
+    _geoTimer?.cancel();
     _streetController.dispose();
     _aptController.dispose();
     _cityController.dispose();
@@ -1060,6 +1084,68 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
   // STEP 4: FIGMA 17:139 - ADDRESS & INTERACTIVE MAP
   // ═══════════════════════════════════════════════════════════════════════════
 
+  void _applyPlace(GeoPlace place, {bool setAddress = false}) {
+    setState(() {
+      _lat = place.lat;
+      _lon = place.lon;
+      _geoMessage = null;
+      if (setAddress) _locationController.text = place.label;
+      if (place.city.isNotEmpty) _cityController.text = place.city;
+      if (place.state.isNotEmpty) _stateController.text = place.state;
+      if (place.postcode.isNotEmpty) _postalCodeController.text = place.postcode;
+      if (place.country.isNotEmpty && _countryController.text.trim().isEmpty) _countryController.text = place.country;
+    });
+  }
+
+  /// Looks the address up shortly after typing stops.
+  void _scheduleGeocode() {
+    _geoTimer?.cancel();
+    _geoTimer = Timer(const Duration(milliseconds: 900), _geocodeNow);
+  }
+
+  Future<void> _geocodeNow() async {
+    _geoTimer?.cancel();
+    final q = _locationController.text.trim();
+    if (q.length < 3) return;
+    setState(() => _locating = true);
+    final place = await _geocoder.search(q);
+    if (!mounted) return;
+    setState(() => _locating = false);
+    if (q != _locationController.text.trim()) return; // typed on meanwhile
+    if (place == null) {
+      setState(() => _geoMessage = "Couldn't find that address — add the area or city");
+      return;
+    }
+    _applyPlace(place);
+  }
+
+  Future<void> _useCurrentLocation() async {
+    setState(() {
+      _locating = true;
+      _geoMessage = null;
+    });
+    final pos = await currentPosition();
+    if (!mounted) return;
+    if (pos == null) {
+      setState(() {
+        _locating = false;
+        _geoMessage = 'Location access was blocked — type your address instead';
+      });
+      return;
+    }
+    final place = await _geocoder.reverse(pos.lat, pos.lon);
+    if (!mounted) return;
+    setState(() => _locating = false);
+    if (place == null) {
+      setState(() {
+        _lat = pos.lat;
+        _lon = pos.lon;
+      });
+      return;
+    }
+    _applyPlace(GeoPlace(lat: pos.lat, lon: pos.lon, label: place.label, city: place.city, state: place.state, postcode: place.postcode, country: place.country), setAddress: true);
+  }
+
   Widget _buildStep4AddressFigma() {
     return Column(
       children: [
@@ -1141,59 +1227,17 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                           ),
                           child: Stack(
                             children: [
-                              Positioned.fill(
-                                child: CustomPaint(
-                                  painter: _FigmaMapPainter(),
-                                ),
-                              ),
-                              Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(8),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color:
-                                                AppTheme.ink.withValues(alpha: 0.12),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Text(
-                                        _locationController.text
-                                                .trim()
-                                                .isNotEmpty
-                                            ? _locationController.text.trim()
-                                            : 'Your place location',
-                                        style: AppFonts.sans(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppTheme.ink,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    const Icon(
-                                      Icons.location_on_rounded,
-                                      size: 44,
-                                      color: AppTheme.forest,
-                                    ),
-                                    Container(
-                                      width: 22,
-                                      height: 7,
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.forest
-                                            .withOpacity(0.28),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                  ],
+                              // Map starts below the address bar: on the web an embedded
+                              // map takes the clicks for the area it covers.
+                              Positioned(
+                                top: 90,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                child: osmMapView(
+                                  lat: _lat,
+                                  lon: _lon,
+                                  fallback: CustomPaint(painter: _FigmaMapPainter()),
                                 ),
                               ),
                               Positioned(
@@ -1248,9 +1292,19 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                                   fontWeight: FontWeight.w400,
                                                 ),
                                               ),
-                                              onChanged: (_) => setState(() {}),
+                                              onChanged: (_) {
+                                                setState(() {});
+                                                _scheduleGeocode();
+                                              },
+                                              onSubmitted: (_) => _geocodeNow(),
                                             ),
                                           ),
+                                          if (_locating)
+                                            const Padding(
+                                              padding: EdgeInsets.all(10),
+                                              child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                                            )
+                                          else
                                           IconButton(
                                             tooltip: 'Use current location',
                                             icon: const Icon(
@@ -1258,12 +1312,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                               size: 20,
                                               color: figmaCoral,
                                             ),
-                                            onPressed: () {
-                                              setState(() {
-                                                _locationController.text =
-                                                    'Lonavala, Maharashtra';
-                                              });
-                                            },
+                                            onPressed: _useCurrentLocation,
                                           ),
                                         ],
                                       ),
@@ -1286,14 +1335,14 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(
-                                        Icons.check_circle_rounded,
+                                      Icon(
+                                        _lat != null ? Icons.check_circle_rounded : Icons.info_outline_rounded,
                                         size: 16,
-                                        color: AppTheme.success,
+                                        color: _lat != null ? AppTheme.success : AppTheme.muted,
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        'Pin placed accurately',
+                                        _geoMessage ?? (_lat != null ? 'Pin placed on the map' : 'Type your address to place the pin'),
                                         style: AppFonts.sans(
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w600,
@@ -1335,6 +1384,52 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 5: PHOTOS (>= 10 PHOTOS)
   // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Uploaded photos are stored as /media/… paths on the API server.
+  String _photoSrc(String url) => url.startsWith('/') ? '${ApiConfig.baseUrl}$url' : url;
+
+  /// Pick one or more photos from the device and upload them to this property.
+  Future<void> _uploadPhotos() async {
+    final stays = _effectiveStays;
+    if (stays == null) return;
+    if (_draftPropertyId <= 0) await _persistStep(); // uploads need the draft to exist
+    if (_draftPropertyId <= 0) {
+      _showError('Please save your listing first, then add photos.');
+      return;
+    }
+    final files = await ImagePicker().pickMultiImage(maxWidth: 2400, imageQuality: 85);
+    if (files.isEmpty || !mounted) return;
+    setState(() => _uploading += files.length);
+    var failed = 0;
+    String? reason;
+    for (final f in files) {
+      try {
+        final bytes = await f.readAsBytes();
+        if (bytes.length > 5 * 1024 * 1024) {
+          failed++;
+          reason = '${f.name} is larger than 5 MB';
+          continue;
+        }
+        final r = await stays.api.post('/api/properties/$_draftPropertyId/photos', {'data': base64Encode(bytes)}) as Map;
+        if (!mounted) return;
+        setState(() {
+          final url = r['url'] as String;
+          if (!_photos.contains(url)) _photos.add(url);
+          _coverPhoto ??= url;
+        });
+      } on ApiException catch (e) {
+        failed++;
+        reason = e.message;
+      } catch (_) {
+        failed++;
+      } finally {
+        if (mounted) setState(() => _uploading--);
+      }
+    }
+    if (failed > 0 && mounted) {
+      _showError('$failed photo${failed == 1 ? '' : 's'} couldn\'t be uploaded${reason == null ? '' : ': $reason'}');
+    }
+  }
 
   void _addPhotoDialog() {
     final controller = TextEditingController();
@@ -1472,7 +1567,8 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     ),
                     const SizedBox(height: 36),
                     InkWell(
-                      onTap: _addPhotoDialog,
+                      key: const Key('upload-photos'),
+                      onTap: _uploading > 0 ? null : _uploadPhotos,
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         height: 140,
@@ -1487,11 +1583,16 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.add_photo_alternate_outlined,
-                                  size: 40, color: figmaCoral),
+                              if (_uploading > 0)
+                                const SizedBox(width: 36, height: 36, child: CircularProgressIndicator(strokeWidth: 3))
+                              else
+                                const Icon(Icons.add_photo_alternate_outlined,
+                                    size: 40, color: figmaCoral),
                               const SizedBox(height: 8),
                               Text(
-                                'Click to add photos or paste image URL',
+                                _uploading > 0
+                                    ? 'Uploading $_uploading photo${_uploading == 1 ? '' : 's'}…'
+                                    : 'Upload photos from your device',
                                 style: AppFonts.sans(
                                   fontWeight: FontWeight.w600,
                                   color: AppTheme.ink,
@@ -1508,7 +1609,20 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    TextButton.icon(
+                      onPressed: _addPhotoDialog,
+                      icon: const Icon(Icons.link, size: 18),
+                      label: const Text('Or add a photo by link'),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_photos.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Text(
+                          '${_photos.length} photo${_photos.length == 1 ? '' : 's'} · tap the star to choose the cover photo',
+                          style: AppFonts.sans(fontSize: 13, color: AppTheme.muted),
+                        ),
+                      ),
                     if (_photos.isEmpty)
                       Container(
                         padding: const EdgeInsets.all(24),
@@ -1519,7 +1633,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            'No photos added yet. Tap above to add.',
+                            'No photos added yet. Upload from your device above.',
                             style: AppFonts.sans(
                                 color: AppTheme.hint),
                           ),
@@ -1535,7 +1649,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
                                 child: Image.network(
-                                  _photos[i],
+                                  _photoSrc(_photos[i]),
                                   width: 140,
                                   height: 100,
                                   fit: BoxFit.cover,
@@ -1553,7 +1667,10 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                 right: 4,
                                 child: InkWell(
                                   onTap: () {
-                                    setState(() => _photos.removeAt(i));
+                                    setState(() {
+                                      final removed = _photos.removeAt(i);
+                                      if (_coverPhoto == removed) _coverPhoto = _photos.isEmpty ? null : _photos.first;
+                                    });
                                   },
                                   child: Container(
                                     padding: const EdgeInsets.all(4),
@@ -1563,6 +1680,28 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                                     ),
                                     child: const Icon(Icons.close,
                                         size: 14, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 4,
+                                left: 4,
+                                child: InkWell(
+                                  key: Key('cover-$i'),
+                                  onTap: () => setState(() => _coverPhoto = _photos[i]),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: (_coverPhoto ?? _photos.first) == _photos[i] ? figmaCoral : Colors.black45,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                      const Icon(Icons.star_rounded, size: 13, color: Colors.white),
+                                      if ((_coverPhoto ?? _photos.first) == _photos[i]) ...[
+                                        const SizedBox(width: 3),
+                                        Text('Cover', style: AppFonts.sans(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                                      ],
+                                    ]),
                                   ),
                                 ),
                               ),
@@ -2708,7 +2847,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                         children: [
                           if (_photos.isNotEmpty)
                             Image.network(
-                              _photos.first,
+                              _photoSrc(_coverPhoto ?? _photos.first),
                               height: 260,
                               width: double.infinity,
                               fit: BoxFit.cover,
@@ -3275,6 +3414,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
           if (parts.isNotEmpty) _cityController.text = parts[0].trim();
           if (parts.length > 1) _stateController.text = parts[1].trim();
         });
+        _geocodeNow();
       },
       borderRadius: BorderRadius.circular(AppTheme.radiusCard),
       child: Container(

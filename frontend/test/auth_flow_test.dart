@@ -230,7 +230,7 @@ void main() {
     expect(find.text('Enter OTP'), findsOneWidget);
     expect(find.text('Please enter the OTP sent to asha@example.com'),
         findsOneWidget);
-    expect(find.textContaining('team@bleiben.co.in'), findsOneWidget);
+    expect(find.textContaining('team@bleiben.co.in'), findsNothing);
     expect(find.text('Resend OTP (60s)'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).last, '000000');
@@ -284,7 +284,7 @@ void main() {
 
     expect(find.text('Welcome back'), findsOneWidget);
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email or phone number *'),
+        find.widgetWithText(TextFormField, 'Email *'),
         'asha@example.com');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
@@ -312,7 +312,7 @@ void main() {
     await openLogin(tester);
 
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email or phone number *'),
+        find.widgetWithText(TextFormField, 'Email *'),
         'nobody@example.com');
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
