@@ -134,8 +134,8 @@ function publicProperty(p, extra = {}) {
     propertySerialId: v("propertySerialId", "property_serial_id", ""),
     status: p.status ?? "draft",
     slug: p.slug ?? null,
-    // "#/" form works on any static host (no server rewrites needed); /p/<slug> also works where rewrites exist.
-    booking_url: p.slug ? `${config.appBaseUrl}/#/p/${p.slug}` : null,
+    // Clean path (no "#"); the web server serves the app for every path.
+    booking_url: p.slug ? `${config.appBaseUrl}/p/${p.slug}` : null,
     setupMethod: v("setupMethod", "setup_method", "manual"),
     airbnbUrl: v("airbnbUrl", "airbnb_url", null),
     current_step: p.current_step ?? "property_type",
@@ -413,6 +413,64 @@ export function propertiesRouter(db) {
       });
       await log(saved, req, "created_draft");
       return res.status(201).json(publicProperty(saved));
+    }),
+  );
+
+  // ── Clusters: group listings (one parent + its child listings) ─────────────
+  const clusterScope = (req) => (req.scope.org_id != null ? { org_id: req.scope.org_id } : { user_id: req.user.id, org_id: null });
+
+  async function clusterInput(req, body, clusterId = null) {
+    const name = String(body?.name ?? "").trim();
+    if (name.length < 2) throw new InputError("Give the cluster a name");
+    const ids = [...new Set((Array.isArray(body?.property_ids) ? body.property_ids : []).map(Number).filter(Number.isInteger))];
+    if (ids.length < 2) throw new InputError("Pick at least two properties for a cluster");
+    for (const id of ids) {
+      if (!(await findScopedProperty(id, req))) throw new InputError("One of the properties wasn't found");
+    }
+    const parentId = Number(body?.parent_id ?? ids[0]);
+    if (!ids.includes(parentId)) throw new InputError("The parent must be one of the cluster's properties");
+    const others = (await db.findDocs("clusters", clusterScope(req))).filter((c) => c.id !== clusterId);
+    const taken = ids.find((id) => others.some((c) => (c.property_ids ?? []).includes(id)));
+    if (taken != null) throw new InputError("A property can only be in one cluster — remove it from its other cluster first");
+    return { name: name.slice(0, 80), parent_id: parentId, property_ids: ids };
+  }
+
+  router.get(
+    "/clusters",
+    handle(async (req, res) => {
+      const list = (await db.findDocs("clusters", clusterScope(req))).sort((a, b) => (a.name < b.name ? -1 : 1));
+      return res.json(list.map((c) => ({ id: c.id, name: c.name, parent_id: c.parent_id, property_ids: c.property_ids ?? [], created_at: c.created_at })));
+    }),
+  );
+
+  router.post(
+    "/clusters",
+    handle(async (req, res) => {
+      const input = await clusterInput(req, req.body);
+      const now = nowIso();
+      const c = await db.insertDoc("clusters", { ...input, ...clusterScope(req), user_id: req.user.id, created_at: now, updated_at: now });
+      return res.status(201).json({ id: c.id, name: c.name, parent_id: c.parent_id, property_ids: c.property_ids, created_at: c.created_at });
+    }),
+  );
+
+  router.patch(
+    "/clusters/:cid",
+    handle(async (req, res) => {
+      const c = await db.findDoc("clusters", { ...clusterScope(req), id: Number(req.params.cid) });
+      if (!c) return res.status(404).json({ detail: "Cluster not found" });
+      const input = await clusterInput(req, { name: c.name, parent_id: c.parent_id, property_ids: c.property_ids, ...req.body }, c.id);
+      const u = await db.updateDoc("clusters", { id: c.id }, { ...input, updated_at: nowIso() });
+      return res.json({ id: u.id, name: u.name, parent_id: u.parent_id, property_ids: u.property_ids, created_at: u.created_at });
+    }),
+  );
+
+  router.delete(
+    "/clusters/:cid",
+    handle(async (req, res) => {
+      const c = await db.findDoc("clusters", { ...clusterScope(req), id: Number(req.params.cid) });
+      if (!c) return res.status(404).json({ detail: "Cluster not found" });
+      await db.deleteDocs("clusters", { id: c.id });
+      return res.status(204).end();
     }),
   );
 

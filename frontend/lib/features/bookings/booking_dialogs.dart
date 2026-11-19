@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/util/date_range.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../core/theme/app_theme.dart';
@@ -145,12 +146,14 @@ class _CreateBookingDialogState extends State<_CreateBookingDialog> {
 
   Future<void> _pickDates() async {
     final now = DateTime.now();
-    final r = await showDateRangePicker(
-      context: context,
+    final r = await pickDateRange(
+      context,
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(now.year + 2),
-      initialDateRange: DateTimeRange(start: _in, end: _out),
-      helpText: 'Check-in and check-out',
+      initial: DateTimeRange(start: _in, end: _out),
+      help: 'Check-in and check-out',
+      startLabel: 'Check-in',
+      endLabel: 'Check-out',
     );
     if (r == null || !r.end.isAfter(r.start)) return;
     setState(() {
@@ -404,9 +407,31 @@ class _QuoteBox extends StatelessWidget {
 /// Returns true when the booking changed.
 Future<bool?> showBookingDetail(BuildContext context,
         {required BookingsApi api, required int bookingId, required Membership membership}) =>
-    showDialog<bool>(
+    showSideSheet<bool>(context, (_) => _BookingDetail(api: api, id: bookingId, membership: membership));
+
+/// Opens [builder] as a full-height panel sliding in from the right
+/// (booking details, like the homyhuts calendar sidebar).
+Future<T?> showSideSheet<T>(BuildContext context, WidgetBuilder builder, {double width = 560}) => showGeneralDialog<T>(
       context: context,
-      builder: (_) => _BookingDetail(api: api, id: bookingId, membership: membership),
+      barrierDismissible: true,
+      barrierLabel: 'Close',
+      barrierColor: Colors.black38,
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (ctx, _, __) {
+        final w = MediaQuery.sizeOf(ctx).width;
+        return Align(
+          alignment: Alignment.centerRight,
+          child: SizedBox(
+            width: w < width + 40 ? w : width,
+            height: double.infinity,
+            child: Material(color: Colors.white, elevation: 12, child: SafeArea(child: builder(ctx))),
+          ),
+        );
+      },
+      transitionBuilder: (ctx, anim, _, child) => SlideTransition(
+        position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+        child: child,
+      ),
     );
 
 class _BookingDetail extends StatefulWidget {
@@ -520,18 +545,28 @@ class _BookingDetailState extends State<_BookingDetail> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) Navigator.of(context).pop(_changed);
       },
-      child: AlertDialog(
-        titlePadding: const EdgeInsets.fromLTRB(24, 20, 12, 0),
-        title: Row(children: [
-          Expanded(child: Text(b == null ? 'Booking' : '${b.guestName} · ${b.code}')),
-          if (b != null) StatusPill(b.status),
-          IconButton(tooltip: 'Close', onPressed: () => Navigator.of(context).pop(_changed), icon: const Icon(Icons.close)),
-        ]),
-        content: SizedBox(
-          width: 620,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(8, 10, 16, 10),
+          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppTheme.border))),
+          child: Row(children: [
+            IconButton(tooltip: 'Close', onPressed: () => Navigator.of(context).pop(_changed), icon: const Icon(Icons.close)),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Booking details', style: AppFonts.sans(fontSize: 13, color: AppTheme.muted)),
+                Text(b == null ? 'Booking' : '${b.guestName} · ${b.code}',
+                    overflow: TextOverflow.ellipsis, style: AppFonts.sans(fontSize: 18, fontWeight: FontWeight.w700)),
+              ]),
+            ),
+            if (b != null) StatusPill(b.status),
+          ]),
+        ),
+        Expanded(
           child: b == null
               ? (_error != null ? Text(_error!) : const SizedBox(height: 160, child: Center(child: CircularProgressIndicator())))
               : SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                     if (b.status == 'held' && b.holdExpiresAt != null)
                       _Banner('Dates on hold until ${b.holdExpiresAt!.substring(11, 16)} UTC. Record a payment or confirm to keep them.'),
@@ -579,11 +614,11 @@ class _BookingDetailState extends State<_BookingDetail> {
                   ]),
                 ),
         ),
-        actionsAlignment: MainAxisAlignment.start,
-        actions: b == null || !_canWrite
-            ? null
-            : [
-                Wrap(spacing: 8, runSpacing: 8, children: [
+        if (b != null && _canWrite)
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+            decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppTheme.border))),
+            child: Wrap(spacing: 8, runSpacing: 8, children: [
                   if (['held', 'pending_payment', 'inquiry'].contains(b.status))
                     _btn('Confirm', () => _run(() => widget.api.action(b.id, 'confirm'), 'Booking confirmed')),
                   if (b.status == 'confirmed' || b.status == 'pending_payment')
@@ -596,9 +631,9 @@ class _BookingDetailState extends State<_BookingDetail> {
                   if (b.status == 'confirmed' || b.status == 'pending_payment')
                     _btn('No-show', () => _run(() => widget.api.action(b.id, 'no-show'), 'Marked as no-show')),
                   if (_canCancel && b.isOpen) _btn('Cancel booking', _cancel, danger: true, key: const Key('cancel-booking')),
-                ]),
-              ],
-      ),
+            ]),
+          ),
+      ]),
     );
   }
 
@@ -741,11 +776,14 @@ class _EditDialogState extends State<_EditDialog> {
               OutlinedButton.icon(
                 onPressed: () async {
                   final now = DateTime.now();
-                  final r = await showDateRangePicker(
-                    context: context,
+                  final r = await pickDateRange(
+                    context,
                     firstDate: DateTime(now.year - 1),
                     lastDate: DateTime(now.year + 2),
-                    initialDateRange: DateTimeRange(start: _in, end: _out),
+                    initial: DateTimeRange(start: _in, end: _out),
+                    help: 'Check-in and check-out',
+                    startLabel: 'Check-in',
+                    endLabel: 'Check-out',
                   );
                   if (r != null && r.end.isAfter(r.start)) {
                     setState(() {

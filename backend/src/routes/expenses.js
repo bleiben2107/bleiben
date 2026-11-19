@@ -240,6 +240,21 @@ export function expensesRouter(db) {
       const cache = new Map();
       const items = [];
       for (const e of list.slice((page - 1) * size, page * size)) items.push(await publicEntry(db, e, cache));
+      // Breakdown for the charts: every matching entry (not just this page).
+      const byCat = new Map();
+      const byProp = new Map();
+      for (const e of list) {
+        for (const l of e.lines ?? []) {
+          if (l.skipped) continue;
+          byCat.set(l.category, round2((byCat.get(l.category) ?? 0) + Number(l.amount || 0)));
+        }
+        byProp.set(e.property_id, round2((byProp.get(e.property_id) ?? 0) + Number(e.total || 0)));
+      }
+      const byProperty = [];
+      for (const [id, amount] of byProp) {
+        const prop = await db.findDoc("properties", { id });
+        byProperty.push({ property_id: id, title: prop?.title || "Untitled property", amount });
+      }
       return res.json({
         items,
         total: list.length,
@@ -247,6 +262,10 @@ export function expensesRouter(db) {
         page,
         page_size: size,
         has_any: all.length > 0,
+        breakdown: {
+          by_category: [...byCat.entries()].map(([category, amount]) => ({ category, amount })).sort((x, y) => y.amount - x.amount),
+          by_property: byProperty.sort((x, y) => y.amount - x.amount),
+        },
       });
     }),
   );

@@ -199,6 +199,15 @@ export async function settleFailure(db, services, attempt, reason) {
   return done;
 }
 
+/**
+ * The gateway used for this stay's booking link. Instant booking switched off
+ * on the property turns the link into booking requests (host confirms).
+ */
+async function stayGateway(db, p) {
+  if (p.instantBooking === false || p.instant_booking === false) return null;
+  return orgGateway(db, p.org_id);
+}
+
 export function publicRouter(db, services = {}) {
   const router = Router();
   const bookLimit = limiter(10, 60 * 60 * 1000);
@@ -211,7 +220,7 @@ export function publicRouter(db, services = {}) {
       const p = await liveProperty(db, req.params.slug);
       const rooms = await activeRooms(db, p.id);
       const ent = await entitlement(db, p.org_id);
-      return res.json(publicStay(p, rooms, await orgGateway(db, p.org_id), ent.bookable));
+      return res.json(publicStay(p, rooms, await stayGateway(db, p), ent.bookable));
     }),
   );
 
@@ -255,7 +264,7 @@ export function publicRouter(db, services = {}) {
       if (!room) throw new InputError("Choose a room", 404);
       const guest = validateGuest(body.guest);
       const { adults, children } = guestCounts(body, room);
-      const gw = await orgGateway(db, p.org_id);
+      const gw = await stayGateway(db, p);
       const token = crypto.randomBytes(24).toString("base64url");
       const now = nowIso();
 

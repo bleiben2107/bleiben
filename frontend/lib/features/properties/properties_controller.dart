@@ -20,6 +20,7 @@ class PropertySummary {
         guests = ((j['capacity'] as Map?)?['guests'] as num?)?.toInt() ?? 0,
         coverPhoto = j['coverPhoto'] as String?,
         bookingUrl = j['booking_url'] as String?,
+        instantBooking = (j['instantBooking'] ?? j['instant_booking']) != false,
         roomCount = (j['room_count'] as num?)?.toInt() ??
             ((j['rooms'] as List?)?.length ?? 0),
         unitCount = (j['unit_count'] as num?)?.toInt() ??
@@ -46,6 +47,9 @@ class PropertySummary {
   final int guests;
   final String? coverPhoto;
   final String? bookingUrl;
+
+  /// Booking link takes paid bookings straight away (else: booking requests).
+  final bool instantBooking;
   final int roomCount;
   final int unitCount;
   final List<Room> rooms;
@@ -194,6 +198,32 @@ class PropertiesController extends ChangeNotifier {
   Future<String?> archiveRoom(int propertyId, int roomId) =>
       _guard(() => api.delete('/api/properties/$propertyId/rooms/$roomId'));
 
+  /// Copies a property (and its rooms) into a new draft; returns it.
+  Future<PropertySummary> clone(int id) async =>
+      PropertySummary.fromJson((await api.post('/api/properties/clone/$id', {}) as Map).cast<String, dynamic>());
+
+  /// Deletes (archives) a property; its booking page goes offline.
+  Future<String?> delete(int id) => _guard(() => api.delete('/api/properties/$id'));
+
+  Future<String?> setInstantBooking(int id, bool on) => _guard(() => api.patch('/api/properties/$id', {'instantBooking': on}));
+
+  // ── Clusters ──
+  Future<List<PropertyCluster>> clusters() async => [
+        for (final c in await api.get('/api/properties/clusters') as List) PropertyCluster.fromJson((c as Map).cast<String, dynamic>())
+      ];
+
+  /// All properties regardless of the list filters (cluster editor).
+  Future<List<PropertySummary>> all() async => [
+        for (final p in await api.get('/api/properties') as List) PropertySummary.fromJson((p as Map).cast<String, dynamic>())
+      ];
+
+  Future<String?> saveCluster({int? id, required String name, required int parentId, required List<int> propertyIds}) => _guard(() {
+        final body = {'name': name, 'parent_id': parentId, 'property_ids': propertyIds};
+        return id == null ? api.post('/api/properties/clusters', body) : api.patch('/api/properties/clusters/$id', body);
+      });
+
+  Future<String?> deleteCluster(int id) => _guard(() => api.delete('/api/properties/clusters/$id'));
+
   Future<String?> _guard(Future<dynamic> Function() call) async {
     try {
       await call();
@@ -203,4 +233,18 @@ class PropertiesController extends ChangeNotifier {
       return e.message;
     }
   }
+}
+
+/// A group of listings: one parent and its child listings.
+class PropertyCluster {
+  PropertyCluster.fromJson(Map<String, dynamic> j)
+      : id = (j['id'] as num).toInt(),
+        name = (j['name'] as String?) ?? '',
+        parentId = (j['parent_id'] as num).toInt(),
+        propertyIds = [for (final x in (j['property_ids'] as List?) ?? const []) (x as num).toInt()];
+
+  final int id;
+  final String name;
+  final int parentId;
+  final List<int> propertyIds;
 }

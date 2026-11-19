@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/util/date_range.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/util/download.dart';
@@ -202,12 +203,12 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
           OutlinedButton.icon(
             onPressed: () async {
               final now = DateTime.now();
-              final r = await showDateRangePicker(
-                context: context,
+              final r = await pickDateRange(
+                context,
                 firstDate: DateTime(now.year - 2),
                 lastDate: DateTime(now.year + 2),
-                initialDateRange: _checkIn,
-                helpText: 'Check-in between',
+                initial: _checkIn,
+                help: 'Check-in between',
               );
               if (r == null) return;
               _checkIn = r;

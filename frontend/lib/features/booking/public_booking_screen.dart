@@ -9,7 +9,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/util/razorpay.dart';
 import '../bookings/bookings_api.dart' show money, prettyDate, ymd;
 
-/// Guest-facing direct booking page (`/#/p/<slug>`): MVP plan §6 —
+/// Guest-facing direct booking page (`/p/<slug>`): MVP plan §6 —
 /// guest selects dates → enters details → Bleiben holds the room → payment is
 /// verified → the reservation is confirmed. No login needed.
 class PublicBookingScreen extends StatefulWidget {

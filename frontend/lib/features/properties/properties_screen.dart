@@ -1,11 +1,24 @@
+import 'dart:async';
+import 'dart:ui' show ImageByteFormat;
+
 import 'package:flutter/material.dart';
 import 'package:bleiben/core/theme/app_fonts.dart';
 import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../core/network/api_client.dart';
+import '../../core/config/api_config.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/util/download.dart';
 import '../auth/auth_models.dart';
+import '../bookings/booking_dialogs.dart' show showCreateBookingDialog, showSideSheet;
+import '../bookings/bookings_api.dart' show BookingsApi;
 import '../home/home_widgets.dart';
+import '../team/team_screen.dart' show TeamMember;
 import 'properties_controller.dart';
+
+part 'property_detail.dart';
+part 'property_clusters.dart';
 
 const _statusFilters = {
   'all': 'All',
@@ -28,11 +41,15 @@ class PropertiesScreen extends StatefulWidget {
     required this.membership,
     required this.onCreate,
     required this.onEditListing,
+    this.onOpenSection,
   });
 
   final PropertiesController controller;
   final Membership membership;
   final VoidCallback onCreate;
+
+  /// Opens another Host Control Center section from a property page.
+  final ValueChanged<String>? onOpenSection;
 
   /// Reopens the listing wizard on a property (raw API payload).
   final Future<void> Function(Map<String, dynamic> raw) onEditListing;
@@ -43,6 +60,9 @@ class PropertiesScreen extends StatefulWidget {
 
 class _PropertiesScreenState extends State<PropertiesScreen> {
   final _search = TextEditingController();
+
+  /// 'listings' or 'clusters'.
+  String _view = 'listings';
 
   PropertiesController get c => widget.controller;
   bool get _canWrite => widget.membership.can('properties.write');
@@ -59,13 +79,16 @@ class _PropertiesScreenState extends State<PropertiesScreen> {
     super.dispose();
   }
 
-  Future<void> _open(PropertySummary p) async {
+  Future<void> _open(PropertySummary p) => _openId(p.id);
+
+  Future<void> _openId(int id) async {
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => PropertyDetailScreen(
         controller: c,
-        propertyId: p.id,
+        propertyId: id,
         membership: widget.membership,
         onEditListing: widget.onEditListing,
+        onOpenSection: widget.onOpenSection,
       ),
     ));
     c.load();
@@ -80,6 +103,22 @@ class _PropertiesScreenState extends State<PropertiesScreen> {
         return ListView(
           padding: EdgeInsets.symmetric(horizontal: wide ? 32 : 14, vertical: 22),
           children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SegmentedButton<String>(
+                key: const Key('properties-view'),
+                segments: const [
+                  ButtonSegment(value: 'listings', icon: Icon(Icons.holiday_village_outlined), label: Text('Listings')),
+                  ButtonSegment(value: 'clusters', icon: Icon(Icons.account_tree_outlined), label: Text('Clusters')),
+                ],
+                selected: {_view},
+                onSelectionChanged: (v) => setState(() => _view = v.first),
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (_view == 'clusters')
+              _ClustersView(controller: c, canWrite: _canWrite, onOpenProperty: _openId)
+            else ...[
             Wrap(
               spacing: 12,
               runSpacing: 12,
@@ -144,6 +183,7 @@ class _PropertiesScreenState extends State<PropertiesScreen> {
               )
             else
               for (final p in c.items) _PropertyRow(property: p, onTap: () => _open(p)),
+            ],
           ],
         );
       },
@@ -243,179 +283,6 @@ class _Empty extends StatelessWidget {
         Text(text, textAlign: TextAlign.center, style: AppFonts.sans(color: HomeColors.muted, fontSize: 15)),
         if (action != null) action!,
       ]),
-    );
-  }
-}
-
-// ── Property details ─────────────────────────────────────────────────────────
-
-/// Property detail with tabs Overview · Rooms & units · Activity (homyhuts:
-/// Property Info · Calendar & Pricing · Update Listing · Activity · Co-Hosts).
-class PropertyDetailScreen extends StatefulWidget {
-  const PropertyDetailScreen({
-    super.key,
-    required this.controller,
-    required this.propertyId,
-    required this.membership,
-    required this.onEditListing,
-  });
-
-  final PropertiesController controller;
-  final int propertyId;
-  final Membership membership;
-  final Future<void> Function(Map<String, dynamic> raw) onEditListing;
-
-  @override
-  State<PropertyDetailScreen> createState() => _PropertyDetailScreenState();
-}
-
-class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
-  PropertySummary? _p;
-  String? _error;
-  bool _busy = false;
-
-  PropertiesController get c => widget.controller;
-  bool get _canWrite => widget.membership.can('properties.write');
-  bool get _canPublish => widget.membership.can('properties.publish');
-
-  @override
-  void initState() {
-    super.initState();
-    _reload();
-  }
-
-  Future<void> _reload() async {
-    try {
-      final p = await c.fetch(widget.propertyId);
-      if (mounted) setState(() => (_p = p, _error = null));
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Could not load this property.');
-    }
-  }
-
-  Future<void> _togglePublish() async {
-    final p = _p!;
-    setState(() => _busy = true);
-    final error = p.isLive ? await c.unpublish(p.id) : await c.publish(p.id);
-    if (!mounted) return;
-    setState(() => _busy = false);
-    _snack(context, error ?? (p.isLive ? 'Booking page taken offline' : 'Published. Your booking page is live.'));
-    _reload();
-  }
-
-  Future<void> _editListing() async {
-    await widget.onEditListing(_p!.raw);
-    if (mounted) _reload();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final p = _p;
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        backgroundColor: AppTheme.paper,
-        appBar: AppBar(
-          backgroundColor: AppTheme.paper,
-          title: Text(p?.displayTitle ?? 'Property', overflow: TextOverflow.ellipsis),
-          actions: [
-            if (p != null && _canWrite)
-              TextButton.icon(
-                onPressed: _editListing,
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: Text(p.isLive ? 'Edit listing' : 'Continue setup'),
-              ),
-            if (p != null && _canPublish)
-              Padding(
-                padding: const EdgeInsets.only(right: 12, left: 4),
-                child: ElevatedButton(
-                  onPressed: _busy ? null : _togglePublish,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(0, 42),
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    backgroundColor: p.isLive ? HomeColors.muted : AppTheme.forest,
-                  ),
-                  child: Text(p.isLive ? 'Unpublish' : 'Publish'),
-                ),
-              ),
-          ],
-          bottom: const TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: [Tab(text: 'Overview'), Tab(text: 'Rooms & units'), Tab(text: 'Activity')],
-          ),
-        ),
-        body: _error != null
-            ? Center(child: Text(_error!))
-            : p == null
-                ? const Center(child: CircularProgressIndicator())
-                : TabBarView(children: [
-                    _Overview(property: p),
-                    _RoomsTab(controller: c, property: p, canWrite: _canWrite, onChanged: _reload),
-                    _ActivityTab(controller: c, propertyId: p.id),
-                  ]),
-      ),
-    );
-  }
-}
-
-class _Overview extends StatelessWidget {
-  const _Overview({required this.property});
-
-  final PropertySummary property;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = property;
-    Widget row(String label, String value) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            SizedBox(width: 160, child: Text(label, style: AppFonts.sans(color: HomeColors.muted))),
-            Expanded(child: Text(value.isEmpty ? '—' : value, style: AppFonts.sans(fontSize: 15))),
-          ]),
-        );
-    return ListView(
-      padding: const EdgeInsets.all(22),
-      children: [
-        Row(children: [StatusPill(status: p.status), const SizedBox(width: 10), Text(p.serialId, style: AppFonts.sans(color: HomeColors.muted))]),
-        const SizedBox(height: 14),
-        if (p.isLive && p.bookingUrl != null)
-          Container(
-            padding: const EdgeInsets.all(14),
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(color: AppTheme.successSoft, borderRadius: BorderRadius.circular(12)),
-            child: Row(children: [
-              const Icon(Icons.public_rounded, color: AppTheme.forest),
-              const SizedBox(width: 10),
-              Expanded(child: SelectableText(p.bookingUrl!, style: AppFonts.sans(fontWeight: FontWeight.w600))),
-              IconButton(
-                tooltip: 'Copy booking link',
-                icon: const Icon(Icons.copy_rounded),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: p.bookingUrl!));
-                  _snack(context, 'Booking link copied');
-                },
-              ),
-            ]),
-          )
-        else if (!p.isLive)
-          Container(
-            padding: const EdgeInsets.all(14),
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(color: AppTheme.warningSoft, borderRadius: BorderRadius.circular(12)),
-            child: Text(
-              'Not live yet. Finish the listing, add your rooms and units, then publish to get a booking link.',
-              style: AppFonts.sans(color: AppTheme.warningInk),
-            ),
-          ),
-        row('Property type', p.propertyType),
-        row('Location', p.location),
-        row('Guests', p.guests == 0 ? '' : '${p.guests}'),
-        row('Base price / night', p.basePrice > 0 ? _money(p.basePrice) : ''),
-        row('Extra guest charge', p.extraGuestCharge > 0 ? _money(p.extraGuestCharge) : ''),
-        row('Advance at booking', p.advancePercent > 0 ? '${p.advancePercent.toStringAsFixed(0)}%' : ''),
-        row('Rooms & units', '${p.roomCount} room type${p.roomCount == 1 ? '' : 's'}, ${p.unitCount} unit${p.unitCount == 1 ? '' : 's'}'),
-      ],
     );
   }
 }

@@ -463,3 +463,38 @@ test("settings: organisation, preferences, sessions sign-out, roles", async (t) 
     assert.ok(act.body.items.some((a) => a.action === "Created a property"));
   });
 });
+
+test("bug sheet: clusters, clean booking link, instant booking toggle syncs the booking page", async (t) => {
+  const fakes = fakeServices();
+  await withServer(memoryDb(t), fakes.services, async (call) => {
+    const h = await setupHost(call, fakes);
+    assert.match(h.prop.booking_url ?? "", /^$/); // drafts have no link
+    const live = await h.as("GET", `/api/properties/${h.prop.id}`);
+    assert.match(live.body.booking_url, /\/p\/[a-z0-9-]+$/);
+    assert.doesNotMatch(live.body.booking_url, /#/);
+
+    // Instant booking off → the link takes booking requests even with a gateway.
+    await h.as("PUT", "/api/settings/payment-gateway", { provider: "test" });
+    assert.equal((await call("GET", `/api/public/stays/${h.slug}`)).body.booking_mode, "instant");
+    await h.as("PATCH", `/api/properties/${h.prop.id}`, { instantBooking: false });
+    assert.equal((await call("GET", `/api/public/stays/${h.slug}`)).body.booking_mode, "request");
+    await h.as("PATCH", `/api/properties/${h.prop.id}`, { instantBooking: true });
+    assert.equal((await call("GET", `/api/public/stays/${h.slug}`)).body.booking_mode, "instant");
+
+    // Clusters: parent + children, validation, one cluster per property.
+    const b = await h.as("POST", "/api/properties", { title: "Pine Cottage — ground floor" });
+    const c = await h.as("POST", "/api/properties", { title: "Pine Cottage — balcony" });
+    assert.equal((await h.as("POST", "/api/properties/clusters", { name: "Pine", property_ids: [h.prop.id] })).status, 400);
+    const made = await h.as("POST", "/api/properties/clusters", { name: "Pine Cottage", parent_id: h.prop.id, property_ids: [h.prop.id, b.body.id] });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    assert.equal(made.body.parent_id, h.prop.id);
+    assert.equal((await h.as("POST", "/api/properties/clusters", { name: "Other", property_ids: [b.body.id, c.body.id] })).status, 400);
+    const upd = await h.as("PATCH", `/api/properties/clusters/${made.body.id}`, { property_ids: [h.prop.id, b.body.id, c.body.id] });
+    assert.equal(upd.status, 200, JSON.stringify(upd.body));
+    assert.deepEqual(upd.body.property_ids, [h.prop.id, b.body.id, c.body.id]);
+    assert.equal((await h.as("GET", "/api/properties/clusters")).body.length, 1);
+    assert.equal((await h.as("GET", `/api/properties/${h.prop.id}`)).status, 200);
+    assert.equal((await h.as("DELETE", `/api/properties/clusters/${made.body.id}`)).status, 204);
+    assert.equal((await h.as("GET", "/api/properties/clusters")).body.length, 0);
+  });
+});
