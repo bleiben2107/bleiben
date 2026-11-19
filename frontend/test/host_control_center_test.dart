@@ -137,9 +137,11 @@ Future<FakePropertiesApi> pumpHost(WidgetTester tester, {String role = 'owner'})
 void main() {
   testWidgets('shell shows the MVP nav; help opens from the top bar', (tester) async {
     await pumpHost(tester);
-    for (final label in ['Dashboard', 'Calendar', 'Properties', 'Reservations', 'Expenses', 'Inbox', 'Channel Manager']) {
+    for (final label in ['Dashboard', 'Calendar', 'Properties', 'Reservations', 'Expenses', 'Inbox']) {
       expect(find.text(label), findsWidgets);
     }
+    // Channel Manager moved off the top bar (reached from a property's Calendar & Pricing tab).
+    expect(find.text('Channel Manager'), findsNothing);
     // Properties is the landing section.
     expect(find.text('Pine Cottage'), findsOneWidget);
     expect(find.text('Goa Beach House'), findsOneWidget);
@@ -179,7 +181,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Not live yet'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(Tab, 'Rooms & units'));
+    await tester.tap(find.widgetWithText(Tab, 'Calendar & Pricing'));
     await tester.pumpAndSettle();
     expect(find.textContaining('No rooms yet'), findsOneWidget);
 
@@ -199,14 +201,17 @@ void main() {
     expect(find.text('Deluxe Room'), findsOneWidget);
     expect(find.textContaining('3 units'), findsOneWidget);
 
-    await tester.tap(find.text('Publish'));
+    await tester.tap(find.widgetWithText(Tab, 'Property info'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('publish-property')));
     await tester.pumpAndSettle();
     expect(fake.requests.where((r) => r.startsWith('POST') && r.endsWith('/api/properties/1/publish')), hasLength(1));
 
-    await tester.tap(find.text('Overview'));
-    await tester.pumpAndSettle();
+    // Live: public link + QR code, and Deactivate in the actions panel.
     expect(find.text('http://127.0.0.1:5180/p/pine-cottage'), findsOneWidget);
-    expect(find.text('Unpublish'), findsOneWidget);
+    expect(find.byKey(const Key('booking-qr')), findsOneWidget);
+    expect(find.byKey(const Key('deactivate-property')), findsOneWidget);
+    expect(find.byKey(const Key('instant-booking')), findsOneWidget);
 
     await tester.tap(find.text('Activity'));
     await tester.pumpAndSettle();
@@ -219,8 +224,11 @@ void main() {
     await tester.tap(find.text('Pine Cottage'));
     await tester.pumpAndSettle();
     expect(find.text('Publish'), findsNothing);
+    expect(find.byKey(const Key('clone-property')), findsNothing);
+    await tester.tap(find.widgetWithText(Tab, 'Update listing'));
+    await tester.pumpAndSettle();
     expect(find.text('Continue setup'), findsNothing);
-    await tester.tap(find.widgetWithText(Tab, 'Rooms & units'));
+    await tester.tap(find.widgetWithText(Tab, 'Calendar & Pricing'));
     await tester.pumpAndSettle();
     expect(find.text('Add room'), findsNothing);
   });

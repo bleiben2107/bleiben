@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/util/date_range.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/network/api_client.dart';
@@ -41,6 +42,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   final _search = TextEditingController();
   final _hScroll = ScrollController();
   late DateTime _from;
+
+  /// Days shown on the timeline (15 by default; the date-range picker sets it).
+  int _days = 15;
   CalendarData? _data;
   String? _error;
   bool _loading = false;
@@ -99,7 +103,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     try {
       final d = _view == 'month'
           ? await widget.api.calendar(from: ymd(_month), days: _monthDays, search: _search.text.trim())
-          : await widget.api.calendar(from: ymd(_from), search: _search.text.trim());
+          : await widget.api.calendar(from: ymd(_from), days: _days, search: _search.text.trim());
       if (!mounted) return;
       setState(() {
         _data = d;
@@ -126,21 +130,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _load();
   }
 
+  /// Pick the first and last day to show (a proper range, up to 62 days).
   Future<void> _pickStart() async {
     final now = DateTime.now();
-    final d = await showDatePicker(
-      context: context,
-      initialDate: _from,
+    final r = await pickDateRange(
+      context,
+      initial: DateTimeRange(start: _from, end: _from.add(Duration(days: _days - 1))),
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(now.year + 2),
+      help: 'Show dates from – to',
+      save: 'Show',
     );
-    if (d == null) return;
-    _from = d;
+    if (r == null) return;
+    _from = DateTime(r.start.year, r.start.month, r.start.day);
+    _days = (r.end.difference(r.start).inDays + 1).clamp(1, 62);
     _load();
+  }
+
+  /// A tap on a sold-out day that a booking covers opens that booking.
+  BookingBar? _bookingOn(CalendarRoom r, int i) {
+    if (i >= r.cells.length) return null;
+    final c = r.cells[i];
+    if (c.blocked || c.available > 0) return null;
+    final day = c.date;
+    final hits = r.bookings.where((b) => !b.externalBlock && b.checkIn.compareTo(day) <= 0 && b.checkOut.compareTo(day) > 0).toList();
+    return hits.length == 1 ? hits.first : null;
   }
 
   void _tapCell(CalendarProperty p, CalendarRoom r, int i) {
     final s = _sel;
+    final booked = _view == 'timeline' && s == null ? _bookingOn(r, i) : null;
+    if (booked != null) {
+      _openBooking(booked.id);
+      return;
+    }
     setState(() {
       if (s != null && s.room.id == r.id && s.start == s.end && i != s.start) {
         _sel = _Selection(r, p, i < s.start ? i : s.start, i < s.start ? s.start : i);
@@ -170,8 +193,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final wide = width >= 1100;
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true): () => _shift(-15),
-        const SingleActivator(LogicalKeyboardKey.arrowRight, alt: true): () => _shift(15),
+        const SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true): () => _shift(-_days),
+        const SingleActivator(LogicalKeyboardKey.arrowRight, alt: true): () => _shift(_days),
         const SingleActivator(LogicalKeyboardKey.escape): () => setState(() => _sel = null),
       },
       child: Focus(
@@ -269,10 +292,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
       if (_view == 'timeline') ...[
         OutlinedButton.icon(
-            key: const Key('prev-15'), onPressed: () => _shift(-15), icon: const Icon(Icons.chevron_left), label: const Text('Previous 15 days')),
-        OutlinedButton.icon(onPressed: _pickStart, icon: const Icon(Icons.event_outlined), label: Text(range.isEmpty ? 'Pick date' : range)),
+            key: const Key('prev-15'), onPressed: () => _shift(-_days), icon: const Icon(Icons.chevron_left), label: Text('Previous $_days days')),
         OutlinedButton.icon(
-            key: const Key('next-15'), onPressed: () => _shift(15), icon: const Icon(Icons.chevron_right), label: const Text('Next 15 days')),
+            key: const Key('calendar-range'), onPressed: _pickStart, icon: const Icon(Icons.date_range_outlined), label: Text(range.isEmpty ? 'Pick dates' : range)),
+        OutlinedButton.icon(
+            key: const Key('next-15'), onPressed: () => _shift(_days), icon: const Icon(Icons.chevron_right), label: Text('Next $_days days')),
       ],
       TextButton(
           onPressed: () {
@@ -313,7 +337,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       dot(AppTheme.clay, 'Pending payment / hold'),
       dot(AppTheme.dangerSoft, 'Overbooked (conflict)', border: AppTheme.danger),
       dot(const Color(0xFF2F5C8A), 'Checked in'),
-      Text('Tap a date to select it, tap another date in the same row for a range. Alt + ←/→ moves 15 days.',
+      Text('Tap a date to select it, tap another date in the same row for a range. Alt + ←/→ moves $_days days.',
           style: AppFonts.sans(fontSize: 13, color: AppTheme.muted)),
     ]);
   }

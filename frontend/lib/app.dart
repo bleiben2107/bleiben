@@ -28,7 +28,7 @@ class BleibenApp extends StatelessWidget {
           title: 'Bleiben',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
-          // Named routes so the Host Control Center lives at #/host/<section>
+          // Named routes so the Host Control Center lives at /host/<section>
           // and a browser refresh lands back on it (signed in) instead of home.
           onGenerateInitialRoutes: (initial) => [
             _homeRoute(signedIn),

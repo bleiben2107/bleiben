@@ -4,17 +4,19 @@ import 'app.dart';
 import 'core/network/api_client.dart';
 import 'core/storage/session_store.dart';
 import 'core/theme/app_theme.dart';
+import 'core/util/url_strategy.dart';
 import 'features/booking/public_booking_screen.dart';
 import 'features/auth/auth_controller.dart';
 
 Future<void> main() async {
+  useCleanUrls();
   WidgetsFlutterBinding.ensureInitialized();
   final session = SessionStore();
   await session.load();
   final api = ApiClient(session: session);
   final auth = AuthController(api: api, session: session);
 
-  // Guest booking pages: /p/<slug> (with server rewrites) or /#/p/<slug>.
+  // Guest booking pages: /p/<slug> (old /#/p/<slug> links are rewritten).
   final slug = bookingSlug(Uri.base);
   if (slug != null) {
     runApp(MaterialApp(

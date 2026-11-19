@@ -110,8 +110,10 @@ void main() {
     expect(find.text('Pending balances'), findsOneWidget);
     expect(find.text('1 · ₹2,000'), findsOneWidget);
     expect(find.text('1 of 2 free'), findsOneWidget);
-    expect(find.byKey(const Key('qa-calendar')), findsOneWidget);
-    expect(find.byKey(const Key('qa-block')), findsOneWidget);
+    // Nav shortcuts removed from the quick actions (bug sheet); actions stay.
+    expect(find.byKey(const Key('qa-calendar')), findsNothing);
+    expect(find.byKey(const Key('qa-block')), findsNothing);
+    expect(find.byKey(const Key('qa-booking')), findsOneWidget);
   });
 
   testWidgets('calendar: month view with blocked day; reservations: guests view', (tester) async {

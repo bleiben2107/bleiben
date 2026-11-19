@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../core/util/date_range.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/donut_chart.dart';
 import '../auth/auth_models.dart';
 import '../bookings/booking_dialogs.dart';
 import '../bookings/bookings_api.dart';
@@ -31,8 +33,8 @@ String _compact(num v) {
 
 /// Host Control Center → Dashboard (REA 08 §1, tutorial-validated layout):
 /// quick actions, filter row, six KPI cards against the previous period,
-/// a right-hand Today column, sources, where money goes, properties ranking,
-/// revenue & expenses by month and a 13-week occupancy outlook.
+/// a right-hand Today column, sources and where money goes (donut charts),
+/// properties ranking and revenue & expenses by month.
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
     super.key,
@@ -135,11 +137,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       const SizedBox(height: 18),
       _twoUp(wide || width >= 900, _sources(d), _money(d)),
       const SizedBox(height: 18),
-      _properties(d),
-      const SizedBox(height: 18),
-      _monthly(d),
-      const SizedBox(height: 18),
-      _outlook(d),
+      _twoUp(width >= 1300, _properties(d), _monthly(d)),
     ]);
     return RefreshIndicator(
       onRefresh: _load,
@@ -224,14 +222,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (m.can('properties.write') && widget.onCreateProperty != null)
         tile('Create property', 'Add a homestay, villa or cottage', Icons.add_home_outlined, widget.onCreateProperty, const Key('qa-create-property')),
       tile('Properties', 'Manage listings and rates', Icons.holiday_village_outlined, () => widget.onOpenSection('properties'), const Key('qa-properties')),
-      if (m.can('calendar.read'))
-        tile('Open calendar', 'Availability, prices and holds', Icons.calendar_month_outlined, () => widget.onOpenSection('calendar'), const Key('qa-calendar')),
-      if (m.can('calendar.write'))
-        tile('Block dates', 'Select dates in the calendar', Icons.block, () => widget.onOpenSection('calendar'), const Key('qa-block')),
-      if (m.can('bookings.read'))
-        tile('View reservations', 'Every booking in one list', Icons.event_available_outlined, () => widget.onOpenSection('reservations'), const Key('qa-reservations')),
-      if (m.can('expenses.read'))
-        tile('Manage expenses', 'Full history and reports', Icons.account_balance_wallet_outlined, () => widget.onOpenSection('expenses'), const Key('qa-expenses')),
     ]);
   }
 
@@ -261,8 +251,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       drop('Period', _period, _periods, (v) async {
         if (v == 'custom') {
           final now = DateTime.now();
-          final picked = await showDateRangePicker(
-              context: context, firstDate: DateTime(now.year - 3), lastDate: DateTime(now.year + 2), initialDateRange: _custom);
+          final picked = await pickDateRange(context,
+              firstDate: DateTime(now.year - 3), lastDate: DateTime(now.year + 2), initial: _custom, help: 'Show figures for');
           if (picked == null) return setState(() {});
           _custom = picked;
         }
@@ -375,12 +365,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ]),
       ),
     ];
-    final cols = width >= 1150 ? 3 : width >= 700 ? 2 : 1;
-    return LayoutBuilder(builder: (context, c) {
-      final w = (c.maxWidth - (cols - 1) * 12) / cols;
-      return Wrap(spacing: 12, runSpacing: 12, children: [for (final card in cards) SizedBox(width: w, child: card)]);
-    });
+    return _grid(cards, width >= 1150 ? 3 : width >= 700 ? 2 : 1);
   }
+
+  /// Equal-width, equal-height cards, [cols] per row.
+  Widget _grid(List<Widget> cards, int cols) => Column(children: [
+        for (var i = 0; i < cards.length; i += cols) ...[
+          if (i > 0) const SizedBox(height: 12),
+          IntrinsicHeight(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              for (var j = i; j < i + cols; j++) ...[
+                if (j > i) const SizedBox(width: 12),
+                Expanded(child: j < cards.length ? cards[j] : const SizedBox()),
+              ],
+            ]),
+          ),
+        ],
+      ]);
 
   Widget _kpis(Map<String, dynamic> d, double width) {
     final k = (d['kpis'] as Map).cast<String, Map>();
@@ -417,11 +418,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       kpi('Net RevPAR', money(k['revpar']!['value'] as num), 'per available night', _change(k['revpar']!['change'] as num?),
           'Net revenue per available night, booked or not', const Key('kpi-revpar')),
     ];
-    final cols = width >= 1400 ? 3 : width >= 700 ? 3 : 2;
-    return LayoutBuilder(builder: (context, c) {
-      final w = (c.maxWidth - (cols - 1) * 12) / cols;
-      return Wrap(spacing: 12, runSpacing: 12, children: [for (final card in cards) SizedBox(width: w, child: card)]);
-    });
+    return _grid(cards, width >= 700 ? 3 : 2);
   }
 
   Widget _today(Map<String, dynamic> d) {
@@ -477,19 +474,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _twoUp(bool side, Widget a, Widget b) =>
       side ? IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(child: a), const SizedBox(width: 18), Expanded(child: b)])) : Column(children: [a, const SizedBox(height: 18), b]);
 
-  static const _palette = [AppTheme.forest, AppTheme.clay, AppTheme.moss, Color(0xFF2F5C8A), Color(0xFFB59A57), Color(0xFF7D6B91), AppTheme.hint];
-
-  Widget _shareBar(List<double> shares) => ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: SizedBox(
-          height: 12,
-          child: Row(children: [
-            for (final (i, s) in shares.indexed)
-              if (s > 0) Expanded(flex: (s * 10).round().clamp(1, 1000), child: Container(color: _palette[i % _palette.length])),
-            if (shares.every((s) => s <= 0)) Expanded(child: Container(color: AppTheme.sage)),
-          ]),
-        ),
-      );
+  static Color _color(int i) => DonutChart.colorAt(i);
 
   Widget _sources(Map<String, dynamic> d) {
     final s = (d['sources'] as List).cast<Map>();
@@ -508,8 +493,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: s.isEmpty
           ? Text('No bookings in this range.', style: AppFonts.sans(color: AppTheme.muted))
           : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              _shareBar([for (final x in s) ((byRev ? x['share_revenue'] : x['share_nights']) as num).toDouble()]),
-              const SizedBox(height: 10),
+              DonutChart(
+                key: const Key('sources-donut'),
+                slices: [
+                  for (final (i, x) in s.indexed)
+                    DonutSlice(x['label'] as String, ((byRev ? x['revenue'] : x['bookings']) as num).toDouble(), color: _color(i)),
+                ],
+                centerValue: byRev
+                    ? _compact(s.fold<num>(0, (t, x) => t + (x['revenue'] as num)))
+                    : '${s.fold<num>(0, (t, x) => t + (x['bookings'] as num))}',
+                centerLabel: byRev ? 'revenue' : 'bookings',
+              ),
+              const SizedBox(height: 14),
               Row(children: [
                 Expanded(flex: 4, child: Text('Source', style: h)),
                 Expanded(flex: 3, child: Text('Bookings', style: h, textAlign: TextAlign.right, maxLines: 1, softWrap: false, overflow: TextOverflow.visible)),
@@ -526,7 +521,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Expanded(
                         flex: 4,
                         child: Row(children: [
-                          Container(width: 10, height: 10, decoration: BoxDecoration(color: _palette[i % _palette.length], shape: BoxShape.circle)),
+                          Container(width: 10, height: 10, decoration: BoxDecoration(color: _color(i), shape: BoxShape.circle)),
                           const SizedBox(width: 6),
                           Flexible(child: Text(x['label'] as String, overflow: TextOverflow.ellipsis)),
                         ]),
@@ -561,7 +556,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Widget row(int i, String name, num share, num amount) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 5),
           child: Row(children: [
-            Container(width: 10, height: 10, decoration: BoxDecoration(color: _palette[i % _palette.length], shape: BoxShape.circle)),
+            Container(width: 10, height: 10, decoration: BoxDecoration(color: _color(i), shape: BoxShape.circle)),
             const SizedBox(width: 6),
             Expanded(flex: 5, child: Text(name, overflow: TextOverflow.ellipsis)),
             Expanded(flex: 2, child: Text('${share.toStringAsFixed(share % 1 == 0 ? 0 : 1)}%', textAlign: TextAlign.right)),
@@ -575,8 +570,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: m.isEmpty
           ? Text('No expenses recorded in this range.', style: AppFonts.sans(color: AppTheme.muted))
           : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              _shareBar([for (final x in shown) (x['share'] as num).toDouble(), if (rest.isNotEmpty) restShare.toDouble()]),
-              const SizedBox(height: 10),
+              DonutChart(
+                key: const Key('money-donut'),
+                slices: [
+                  for (final (i, x) in shown.indexed) DonutSlice(x['category'] as String, (x['amount'] as num).toDouble(), color: _color(i)),
+                  if (rest.isNotEmpty) DonutSlice('Other ${rest.length} categories', restAmount.toDouble(), color: _color(shown.length)),
+                ],
+                maxLegend: 99,
+                centerValue: _compact(m.fold<num>(0, (t, x) => t + (x['amount'] as num))),
+                centerLabel: 'expenses',
+              ),
+              const SizedBox(height: 14),
               for (final (i, x) in shown.indexed) row(i, x['category'] as String, x['share'] as num, x['amount'] as num),
               if (rest.isNotEmpty) row(shown.length, 'Other ${rest.length} categories', restShare, restAmount),
               if (m.length > 6)
@@ -698,46 +702,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(width: 6),
         Text(t, style: AppFonts.sans(fontSize: 12.5, color: AppTheme.muted)),
       ]);
-
-  Widget _outlook(Map<String, dynamic> d) {
-    final weeks = (d['outlook'] as List).cast<Map>();
-    Color bandColor(String b) => switch (b) {
-          'high' => AppTheme.forest,
-          'mid' => AppTheme.moss,
-          'low' => AppTheme.sage,
-          _ => const Color(0xFFE9E6E1),
-        };
-    return _card(
-      key: const Key('outlook'),
-      title: 'Occupancy outlook',
-      help: 'Next 13 weeks. Hover any week to read exact dates and nights.',
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          for (final w in weeks)
-            Expanded(
-              child: Tooltip(
-                message: '${prettyDate(w['from'] as String)} – ${prettyDate(w['to'] as String)}\n'
-                    '${w['band'] == 'not_offered' ? 'Not offered' : 'Booked ${w['pct']}% · ${w['booked_nights']} / ${w['offered_nights']} nights'}',
-                child: Container(
-                  height: 44,
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: bandColor(w['band'] as String), borderRadius: BorderRadius.circular(6)),
-                  child: Text(w['band'] == 'not_offered' ? '–' : '${(w['pct'] as num).round()}%',
-                      style: AppFonts.sans(
-                          fontSize: 11.5, fontWeight: FontWeight.w600, color: w['band'] == 'high' || w['band'] == 'mid' ? Colors.white : AppTheme.inkSoft)),
-                ),
-              ),
-            ),
-        ]),
-        const SizedBox(height: 10),
-        Wrap(spacing: 16, runSpacing: 6, children: [
-          _legendDot(AppTheme.forest, '50% and above'),
-          _legendDot(AppTheme.moss, '25–49%'),
-          _legendDot(AppTheme.sage, 'Under 25%'),
-          _legendDot(const Color(0xFFE9E6E1), 'Not offered'),
-        ]),
-      ]),
-    );
-  }
 }

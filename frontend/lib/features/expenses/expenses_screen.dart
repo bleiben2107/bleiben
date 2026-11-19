@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/util/date_range.dart';
+import '../../core/widgets/donut_chart.dart';
 import '../../core/config/api_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_fonts.dart';
@@ -128,6 +130,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   bool _loading = false;
   int _page = 1;
   final Set<int> _expanded = {};
+  String _breakdownBy = 'category';
 
   bool get _canWrite => widget.membership.can('expenses.write');
 
@@ -163,6 +166,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       'this_month' => (ymd(DateTime(now.year, now.month, 1)), ymd(now)),
       'last_month' => (ymd(DateTime(now.year, now.month - 1, 1)), ymd(DateTime(now.year, now.month, 0))),
       'last_90' => (ymd(now.subtract(const Duration(days: 89))), ymd(now)),
+      'last_3_months' => (ymd(DateTime(now.year, now.month - 2, 1)), ymd(now)),
+      // Indian financial year: 1 April – 31 March.
+      'this_fy' => (ymd(DateTime(now.month >= 4 ? now.year : now.year - 1, 4, 1)), ymd(now)),
+      'last_fy' => (ymd(DateTime(now.month >= 4 ? now.year - 1 : now.year - 2, 4, 1)), ymd(DateTime(now.month >= 4 ? now.year : now.year - 1, 3, 31))),
       'this_year' => (ymd(DateTime(now.year, 1, 1)), ymd(now)),
       'custom' when _custom != null => (ymd(_custom!.start), ymd(_custom!.end)),
       _ => ('', ''),
@@ -322,15 +329,17 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           _drop('Period', _period, const {
             'this_month': 'This month',
             'last_month': 'Last month',
-            'last_90': 'Last 90 days',
-            'this_year': 'This year',
+            'last_3_months': 'Last 3 months',
+            'this_fy': 'This financial year',
+            'last_fy': 'Last financial year',
+            'this_year': 'This calendar year',
             'all': 'All time',
             'custom': 'Custom range',
           }, (v) async {
             _period = v;
             if (v == 'custom') {
               final now = DateTime.now();
-              _custom = await showDateRangePicker(context: context, firstDate: DateTime(now.year - 5), lastDate: now, initialDateRange: _custom);
+              _custom = await pickDateRange(context, firstDate: DateTime(now.year - 5), lastDate: now, initial: _custom, help: 'Expenses dated');
               if (_custom == null) _period = 'this_month';
               _load();
             }
@@ -372,6 +381,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           ),
         ],
         const SizedBox(height: 14),
+        if (d != null && items.isNotEmpty && d['breakdown'] != null) ...[_breakdown(d, wide), const SizedBox(height: 14)],
         if (_loading) const LinearProgressIndicator(minHeight: 2),
         if (_error != null)
           Padding(padding: const EdgeInsets.all(20), child: Text(_error!, style: AppFonts.sans(color: AppTheme.danger)))
@@ -403,6 +413,74 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 icon: const Icon(Icons.chevron_right)),
           ]),
       ],
+    );
+  }
+
+  /// Where the money went in this period: donut + table, by category or property.
+  Widget _breakdown(Map<String, dynamic> d, bool wide) {
+    final b = (d['breakdown'] as Map).cast<String, dynamic>();
+    final byCat = _breakdownBy == 'category';
+    final rows = [
+      for (final x in ((byCat ? b['by_category'] : b['by_property']) as List).cast<Map>())
+        (label: (byCat ? x['category'] : x['title']) as String, amount: (x['amount'] as num).toDouble()),
+    ];
+    final total = rows.fold(0.0, (t, x) => t + x.amount);
+    final (from, to) = _range;
+    final props = ((b['by_property'] as List?) ?? const []).length;
+    String compact(double v) => v >= 100000 ? '₹${(v / 100000).toStringAsFixed(2)}L' : v >= 1000 ? '₹${(v / 1000).toStringAsFixed(1)}k' : money(v);
+    final h = AppFonts.sans(fontSize: 12.5, color: AppTheme.muted, fontWeight: FontWeight.w600);
+    final chart = Column(mainAxisSize: MainAxisSize.min, children: [
+      DonutChart(
+        key: const Key('expenses-donut'),
+        slices: [for (final (i, x) in rows.indexed) DonutSlice(x.label, x.amount, color: DonutChart.colorAt(i))],
+        centerValue: compact(total),
+        centerLabel: 'Total spend',
+        size: 170,
+        showLegend: false,
+      ),
+      const SizedBox(height: 10),
+      if (from.isNotEmpty) Text('${prettyDate(from)} – ${prettyDate(to, year: true)}', style: AppFonts.sans(color: AppTheme.muted, fontSize: 13)),
+      Text('${d['total']} expense${d['total'] == 1 ? '' : 's'} · $props propert${props == 1 ? 'y' : 'ies'}', style: AppFonts.sans(fontSize: 13, fontWeight: FontWeight.w600)),
+    ]);
+    final table = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        Expanded(flex: 5, child: Text(byCat ? 'Category' : 'Property', style: h)),
+        Expanded(flex: 2, child: Text('Share', style: h, textAlign: TextAlign.right)),
+        Expanded(flex: 3, child: Text('Amount', style: h, textAlign: TextAlign.right)),
+      ]),
+      const Divider(height: 14),
+      for (final (i, x) in rows.indexed)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          child: Row(children: [
+            Container(width: 10, height: 10, decoration: BoxDecoration(color: DonutChart.colorAt(i), borderRadius: BorderRadius.circular(2))),
+            const SizedBox(width: 8),
+            Expanded(flex: 5, child: Text(x.label, overflow: TextOverflow.ellipsis)),
+            Expanded(flex: 2, child: Text(total <= 0 ? '0%' : '${(x.amount / total * 100).toStringAsFixed(1)}%', textAlign: TextAlign.right)),
+            Expanded(flex: 3, child: Text(money(x.amount), textAlign: TextAlign.right, style: AppFonts.sans(fontWeight: FontWeight.w600))),
+          ]),
+        ),
+    ]);
+    return Container(
+      key: const Key('expenses-breakdown'),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppTheme.border), borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Expanded(child: Text('Where money goes', style: AppFonts.sans(fontSize: 16, fontWeight: FontWeight.w700))),
+          SegmentedButton<String>(
+            key: const Key('breakdown-by'),
+            style: const ButtonStyle(visualDensity: VisualDensity.compact),
+            segments: const [ButtonSegment(value: 'category', label: Text('Category')), ButtonSegment(value: 'property', label: Text('Property'))],
+            selected: {_breakdownBy},
+            onSelectionChanged: (v) => setState(() => _breakdownBy = v.first),
+          ),
+        ]),
+        const SizedBox(height: 14),
+        if (wide)
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 260, child: chart), const SizedBox(width: 24), Expanded(child: table)])
+        else ...[chart, const SizedBox(height: 16), table],
+      ]),
     );
   }
 

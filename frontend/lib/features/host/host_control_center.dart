@@ -73,7 +73,7 @@ const hostSections = [
   ]),
   HostSection('expenses', 'Expenses', Icons.account_balance_wallet_outlined, permission: 'expenses.read', built: true),
   HostSection('inbox', 'Inbox', Icons.inbox_outlined, permission: 'notifications.read', built: true),
-  HostSection('channels', 'Channel Manager', Icons.sync_alt_rounded, permission: 'channels.read', built: true),
+  HostSection('channels', 'Channel Manager', Icons.sync_alt_rounded, permission: 'channels.read', built: true, inNav: false),
   HostSection('settings', 'Settings', Icons.settings_outlined, permission: 'org.read', built: true, inNav: false),
   HostSection('billing', 'Subscription & Billing', Icons.workspace_premium_outlined, permission: 'org.read', built: true, inNav: false),
   HostSection('support', 'Help', Icons.help_outline_rounded, built: true, inNav: false),
@@ -156,7 +156,7 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
 
   String? _urlSection;
 
-  /// Keeps the address bar at #/host/<section> so a refresh reopens this section.
+  /// Keeps the address bar at /host/<section> so a refresh reopens this section.
   void _syncUrl() {
     if (!kIsWeb || _urlSection == _section) return;
     if (!(ModalRoute.of(context)?.settings.name ?? '').startsWith('/host')) return;
@@ -247,9 +247,21 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
           membership: m,
           onCreate: () => openWizard(),
           onEditListing: (raw) => openWizard(draft: raw),
+          onOpenSection: (k) => setState(() => _section = k),
         ),
     };
   }
+
+  /// Every module uses the same centred content width so screens line up
+  /// evenly on wide monitors (the calendar keeps the full width).
+  static const contentMaxWidth = 1440.0;
+
+  Widget _evenWidth(String key, Widget child) => key == 'calendar'
+      ? child
+      : Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: contentMaxWidth), child: child),
+        );
 
   @override
   Widget build(BuildContext context) {
@@ -280,7 +292,7 @@ class _HostControlCenterScreenState extends State<HostControlCenterScreen> {
                     : !_allowed(section)
                         ? const _NoAccess()
                         : section.built
-                            ? _buildSection(section.key)
+                            ? _evenWidth(section.key, _buildSection(section.key))
                             : _ComingNext(section: section),
               ),
             ],

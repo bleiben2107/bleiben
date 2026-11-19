@@ -199,7 +199,19 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
     }
     if (widget.initialDraft != null) {
       _loadFromDraft(widget.initialDraft!);
+      _currentStep = _resumeStep(widget.initialDraft!);
     }
+  }
+
+  /// "Continue setup": a draft reopens on the step after the last one saved
+  /// (the saved code is the step that was completed). Live listings start at
+  /// the beginning so every section can be reviewed.
+  int _resumeStep(Stay draft) {
+    if (draft.status == 'activated') return 0;
+    for (var i = 0; i < _totalSteps; i++) {
+      if (_getStepCode(i) == draft.currentStep) return (i + 1).clamp(0, _totalSteps - 1);
+    }
+    return 0;
   }
 
   Future<void> _initFallbackController() async {

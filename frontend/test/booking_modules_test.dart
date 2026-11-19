@@ -568,7 +568,8 @@ void main() {
     expect(find.text("Today's check-ins"), findsOneWidget);
     expect(find.text('₹1,350 saved in commission'), findsOneWidget);
     expect(find.text('Where money goes'), findsOneWidget);
-    expect(find.text('Occupancy outlook'), findsOneWidget);
+    expect(find.text('Occupancy outlook'), findsNothing); // removed (bug sheet)
+    expect(find.byKey(const Key('sources-donut')), findsOneWidget);
   });
 
   testWidgets('expenses: list shows repeat badges; adding an entry posts its lines', (tester) async {
