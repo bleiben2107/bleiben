@@ -194,8 +194,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _quickActions() {
     final m = widget.membership;
     Widget tile(String title, String sub, IconData icon, VoidCallback? onTap, Key key) => SizedBox(
-          width: 240,
           child: Card(
+            margin: EdgeInsets.zero,
             child: InkWell(
               key: key,
               onTap: onTap,
@@ -216,13 +216,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         );
-    return Wrap(spacing: 10, runSpacing: 10, children: [
+    final tiles = [
       if (m.can('bookings.write')) tile('Add direct booking', 'Offline or phone booking', Icons.add_box_outlined, _addBooking, const Key('qa-booking')),
       if (m.can('expenses.write')) tile('Add expenses', 'Record a new cost', Icons.receipt_long_outlined, widget.onAddExpense, const Key('qa-expense')),
       if (m.can('properties.write') && widget.onCreateProperty != null)
         tile('Create property', 'Add a homestay, villa or cottage', Icons.add_home_outlined, widget.onCreateProperty, const Key('qa-create-property')),
       tile('Properties', 'Manage listings and rates', Icons.holiday_village_outlined, () => widget.onOpenSection('properties'), const Key('qa-properties')),
-    ]);
+    ];
+    // Equal cards across the full width (2 per row on narrow screens).
+    final width = MediaQuery.sizeOf(context).width;
+    return _grid(tiles, width >= 900 ? tiles.length : 2);
   }
 
   Widget _filters(Map<String, dynamic> d) {

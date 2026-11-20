@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/util/input_rules.dart';
 import '../../core/config/api_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_fonts.dart';
@@ -263,7 +264,7 @@ class _PrefsTabState extends State<_PrefsTab> {
             controller: _tax,
             enabled: widget.canEdit,
             keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+            inputFormatters: InputRules.amount,
             decoration: const InputDecoration(labelText: 'GST on room tariff (%)', helperText: 'e.g. 0, 5, 12 or 18 depending on your tariff slab'),
           ),
           SwitchListTile(

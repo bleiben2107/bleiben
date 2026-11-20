@@ -107,6 +107,8 @@ class _PropertiesScreenState extends State<PropertiesScreen> {
               alignment: Alignment.centerLeft,
               child: SegmentedButton<String>(
                 key: const Key('properties-view'),
+                showSelectedIcon: false,
+                style: const ButtonStyle(padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 18))),
                 segments: const [
                   ButtonSegment(value: 'listings', icon: Icon(Icons.holiday_village_outlined), label: Text('Listings')),
                   ButtonSegment(value: 'clusters', icon: Icon(Icons.account_tree_outlined), label: Text('Clusters')),

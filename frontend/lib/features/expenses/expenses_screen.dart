@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/util/input_rules.dart';
 import '../../core/util/date_range.dart';
 import '../../core/widgets/donut_chart.dart';
 import '../../core/config/api_config.dart';
@@ -487,7 +487,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   Widget _amountField(TextEditingController c, String label) => TextField(
         controller: c,
         keyboardType: TextInputType.number,
-        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+        inputFormatters: InputRules.amount,
         onSubmitted: (_) => _load(),
         decoration: InputDecoration(labelText: label, isDense: true),
       );
@@ -736,7 +736,7 @@ class _EntryDialogState extends State<_EntryDialog> {
                   child: OutlinedButton.icon(
                     onPressed: () async {
                       final now = DateTime.now();
-                      final d = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(now.year - 5), lastDate: now);
+                      final d = await pickDate(context, initial: _date, firstDate: DateTime(now.year - 5), lastDate: now, help: 'Expense date');
                       if (d != null) setState(() => _date = d);
                     },
                     icon: const Icon(Icons.event_outlined),
@@ -789,7 +789,7 @@ class _EntryDialogState extends State<_EntryDialog> {
                           controller: l.amount,
                           onChanged: (_) => setState(() {}),
                           keyboardType: TextInputType.number,
-                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                          inputFormatters: InputRules.amount,
                           decoration: const InputDecoration(labelText: 'Amount (₹)', isDense: true),
                         ),
                       ),
@@ -908,6 +908,7 @@ class _RulesDialogState extends State<_RulesDialog> {
           controller: c,
           autofocus: true,
           keyboardType: number ? TextInputType.number : TextInputType.text,
+          inputFormatters: number ? InputRules.amount : null,
           decoration: InputDecoration(labelText: label),
         ),
         actions: [

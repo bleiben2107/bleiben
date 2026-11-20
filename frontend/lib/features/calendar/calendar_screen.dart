@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/util/input_rules.dart';
 import '../../core/util/date_range.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../core/theme/app_theme.dart';
@@ -157,22 +158,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return hits.length == 1 ? hits.first : null;
   }
 
-  void _tapCell(CalendarProperty p, CalendarRoom r, int i) {
-    final s = _sel;
-    final booked = _view == 'timeline' && s == null ? _bookingOn(r, i) : null;
+  /// A tap on a day opens a half-screen sidebar: the booking when the day is
+  /// booked, else the day panel (availability, pricing, create booking —
+  /// "Change dates" there extends it to a range).
+  Future<void> _tapCell(CalendarProperty p, CalendarRoom r, int i) async {
+    final booked = _view == 'timeline' ? _bookingOn(r, i) : null;
     if (booked != null) {
       _openBooking(booked.id);
       return;
     }
-    setState(() {
-      if (s != null && s.room.id == r.id && s.start == s.end && i != s.start) {
-        _sel = _Selection(r, p, i < s.start ? i : s.start, i < s.start ? s.start : i);
-      } else if (s != null && s.room.id == r.id && s.start == i && s.end == i) {
-        _sel = null;
-      } else {
-        _sel = _Selection(r, p, i, i);
-      }
-    });
+    setState(() => _sel = _Selection(r, p, i, i));
+    await showSideSheet<void>(context, (_) => _SelectionPanel(state: this, inSheet: true));
+    if (mounted) setState(() => _sel = null);
   }
 
   Future<void> _openBooking(int id) async {
@@ -209,13 +206,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
             Expanded(
               child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Expanded(child: _body()),
-                if (_sel != null && wide) ...[
-                  const SizedBox(width: 14),
-                  SizedBox(width: 340, child: _SelectionPanel(key: ValueKey('${_sel!.room.id}-${_sel!.start}-${_sel!.end}'), state: this)),
-                ],
               ]),
             ),
-            if (_sel != null && !wide) SizedBox(height: 320, child: _SelectionPanel(key: ValueKey('${_sel!.room.id}-${_sel!.start}-${_sel!.end}'), state: this)),
           ]),
         ),
       ),
@@ -337,7 +329,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       dot(AppTheme.clay, 'Pending payment / hold'),
       dot(AppTheme.dangerSoft, 'Overbooked (conflict)', border: AppTheme.danger),
       dot(const Color(0xFF2F5C8A), 'Checked in'),
-      Text('Tap a date to select it, tap another date in the same row for a range. Alt + ←/→ moves $_days days.',
+      Text('Tap a date to open it (use Change dates for a range). Alt + ←/→ moves $_days days.',
           style: AppFonts.sans(fontSize: 13, color: AppTheme.muted)),
     ]);
   }
@@ -718,9 +710,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
 /// Side panel for a selected date range: availability (block / unblock with a
 /// reason), pricing (fixed or ±%), and Create booking.
 class _SelectionPanel extends StatefulWidget {
-  const _SelectionPanel({super.key, required this.state});
+  const _SelectionPanel({required this.state, this.inSheet = false});
 
   final _CalendarScreenState state;
+
+  /// Shown in the right-hand sidebar (closing pops the sheet).
+  final bool inSheet;
 
   @override
   State<_SelectionPanel> createState() => _SelectionPanelState();
@@ -774,8 +769,29 @@ class _SelectionPanelState extends State<_SelectionPanel> {
     }
   }
 
+  /// Pick a range within the days on screen for this room.
+  Future<void> _changeDates() async {
+    final room = sel.room;
+    final first = parseYmd(room.cells.first.date);
+    final last = parseYmd(room.cells.last.date);
+    final r = await pickDateRange(
+      context,
+      initial: DateTimeRange(start: parseYmd(from), end: parseYmd(to)),
+      firstDate: first,
+      lastDate: last,
+      help: 'Select dates for ${room.name}',
+    );
+    if (r == null || !mounted) return;
+    final a = r.start.difference(first).inDays.clamp(0, room.cells.length - 1);
+    final b = r.end.difference(first).inDays.clamp(a, room.cells.length - 1);
+    s._sel = _Selection(room, sel.property, a, b);
+    s.setState(() {});
+    setState(() => _days.clear());
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (s._sel == null) return const SizedBox.shrink(); // calendar reloaded underneath
     final allBlocked = cells.every((c) => c.blocked);
     final anyBlocked = cells.any((c) => c.blocked);
     final anyBooked = cells.any((c) => c.booked > 0);
@@ -783,15 +799,30 @@ class _SelectionPanelState extends State<_SelectionPanel> {
     final api = s.widget.api;
     final ids = [sel.room.id];
     return Container(
-      decoration: BoxDecoration(
-          color: Colors.white, border: Border.all(color: AppTheme.border), borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
-      child: ListView(padding: const EdgeInsets.all(16), children: [
+      decoration: widget.inSheet
+          ? null
+          : BoxDecoration(color: Colors.white, border: Border.all(color: AppTheme.border), borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
+      child: ListView(padding: EdgeInsets.all(widget.inSheet ? 20 : 16), children: [
         Row(children: [
-          Expanded(child: Text(sel.room.name, style: AppFonts.sans(fontSize: 17, fontWeight: FontWeight.w700))),
-          IconButton(tooltip: 'Clear selection', onPressed: () => s.setState(() => s._sel = null), icon: const Icon(Icons.close)),
+          Expanded(child: Text(sel.room.name, style: AppFonts.sans(fontSize: 18, fontWeight: FontWeight.w700))),
+          IconButton(
+            tooltip: 'Close',
+            onPressed: () => widget.inSheet ? Navigator.of(context).pop() : s.setState(() => s._sel = null),
+            icon: const Icon(Icons.close),
+          ),
         ]),
         Text('${sel.property.title} · ${prettyDate(from)}${n > 1 ? ' – ${prettyDate(to)}' : ''} · $n day${n == 1 ? '' : 's'}',
             style: AppFonts.sans(fontSize: 13.5, color: AppTheme.muted)),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            key: const Key('change-dates'),
+            onPressed: _changeDates,
+            icon: const Icon(Icons.date_range_outlined, size: 18),
+            label: const Text('Change dates'),
+          ),
+        ),
         if (n > 1) ...[
           const SizedBox(height: 10),
           Text('Apply to', style: AppFonts.sans(fontSize: 13, color: AppTheme.muted)),
@@ -876,7 +907,7 @@ class _SelectionPanelState extends State<_SelectionPanel> {
           controller: _price,
           enabled: s._canEdit,
           keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
-          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[-0-9.]'))],
+          inputFormatters: _percent ? InputRules.signedAmount : InputRules.amount,
           decoration: InputDecoration(
             labelText: _percent ? 'Change (%) e.g. 10 or -15' : 'Price per night (₹)',
             isDense: true,
@@ -909,11 +940,12 @@ class _SelectionPanelState extends State<_SelectionPanel> {
               key: const Key('book-selection'),
               onPressed: allBlocked
                   ? null
-                  : () => s._createBooking(
-                        roomId: sel.room.id,
-                        checkIn: from,
-                        checkOut: ymd(parseYmd(to).add(const Duration(days: 1))),
-                      ),
+                  : () {
+                      final args = (roomId: sel.room.id, checkIn: from, checkOut: ymd(parseYmd(to).add(const Duration(days: 1))));
+                      // Close the day sidebar first; the booking form opens on the calendar.
+                      if (widget.inSheet) Navigator.of(context).pop();
+                      s._createBooking(roomId: args.roomId, checkIn: args.checkIn, checkOut: args.checkOut);
+                    },
               icon: const Icon(Icons.add),
               label: Text('Book ${n == 1 ? '1 night' : '$n nights'}'),
             ),

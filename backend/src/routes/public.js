@@ -15,6 +15,7 @@ import {
 import { notify } from "../notify.js";
 import { createOrder, orgGateway, verifyPayment, verifyWebhook } from "../payments/gateway.js";
 import { hashSecret, secretsMatch } from "../tokens.js";
+import { guestPayDetails, payoutDoc } from "../payments/payout.js";
 import { entitlement } from "../billing/subscription.js";
 
 /**
@@ -302,7 +303,14 @@ export function publicRouter(db, services = {}) {
 
       if (!gw) {
         await notify(db, services, { orgId: p.org_id, kind: "booking_created", booking, guest: false });
-        return res.status(201).json({ booking: guestView(booking, p, room), token, payment: null });
+        // No online payments: show the host's UPI / bank details (if shared) so the guest can pay directly.
+        const pctDirect = Math.min(100, Math.max(0, Number(p.advancePercent ?? 0)));
+        const payDirect = guestPayDetails(await payoutDoc(db, p.org_id), {
+          amount: pctDirect > 0 && pctDirect < 100 ? Math.ceil((booking.total * pctDirect) / 100) : booking.total,
+          reference: booking.code,
+          payee: p.title,
+        });
+        return res.status(201).json({ booking: guestView(booking, p, room), token, payment: null, pay_direct: payDirect });
       }
       let order;
       try {

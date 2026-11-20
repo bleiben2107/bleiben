@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:bleiben/core/theme/app_theme.dart';
 import 'package:bleiben/core/theme/app_fonts.dart';
 
@@ -7,6 +8,7 @@ import 'dart:convert';
 
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/util/input_rules.dart';
 import '../../core/config/api_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/util/geocode.dart';
@@ -2315,6 +2317,7 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                             child: TextField(
                               controller: _priceController,
                               keyboardType: TextInputType.number,
+                              inputFormatters: [...InputRules.digits, LengthLimitingTextInputFormatter(7)],
                               style: AppFonts.sans(
                                 fontSize: 42,
                                 fontWeight: FontWeight.w800,
@@ -2561,13 +2564,22 @@ class _AddPropertyWizardScreenState extends State<AddPropertyWizardScreen> {
                     _fieldLabel('Caretaker / Ground Manager Name'),
                     TextField(
                       controller: _caretakerNameController,
+                      inputFormatters: InputRules.name,
+                      textCapitalization: TextCapitalization.words,
                       decoration: _inputDecoration('e.g. Suresh Patil'),
                     ),
                     const SizedBox(height: 20),
                     _fieldLabel('Caretaker Phone Number'),
                     TextField(
                       controller: _caretakerPhoneController,
-                      decoration: _inputDecoration('+91 98765 43210'),
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: InputRules.phone,
+                      onChanged: (_) => setState(() {}),
+                      decoration: _inputDecoration('+91 98765 43210').copyWith(
+                        errorText: _caretakerPhoneController.text.trim().isEmpty || InputRules.isPhone(_caretakerPhoneController.text)
+                            ? null
+                            : 'Enter a valid 10-digit phone number',
+                      ),
                     ),
                   ],
                 ),

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:bleiben/core/theme/app_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/util/date_range.dart';
+import '../../core/util/input_rules.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../auth/auth_controller.dart';
@@ -9,12 +12,13 @@ import '../auth/auth_models.dart';
 import '../home/home_content.dart';
 import '../home/home_nav.dart';
 import '../home/home_overlays.dart';
+import 'bank_tax_info.dart';
 import '../home/home_sections.dart' show BleibenWordmark;
 import '../home/home_widgets.dart';
 import '../team/team_screen.dart';
 import 'account_controller.dart';
 
-enum AccountSection { personal, verification, team }
+enum AccountSection { personal, verification, bank, team }
 
 const _fieldFill = Colors.white;
 
@@ -88,6 +92,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                 account: _account,
                 onOpenPersonal: () =>
                     setState(() => _section = AccountSection.personal)),
+            AccountSection.bank => auth.activeMembership == null
+                ? const Center(child: CircularProgressIndicator())
+                : BankTaxInfoSection(key: ValueKey('bank-${auth.activeMembership!.orgId}'), api: widget.api),
             AccountSection.team => auth.activeMembership == null
                 ? const Center(child: CircularProgressIndicator())
                 : _TeamAndRoles(auth: auth, account: _account, api: widget.api),
@@ -266,6 +273,9 @@ class _Sidebar extends StatelessWidget {
             badge: _StatusBadge(verified: verified),
           ),
           if (showTeam)
+            item(AccountSection.bank, Icons.account_balance_outlined,
+                'Bank Account and Tax Info'),
+          if (showTeam)
             item(AccountSection.team, Icons.groups_2_outlined,
                 'Team & roles'),
         ],
@@ -427,11 +437,12 @@ class _PersonalInfoState extends State<_PersonalInfo> {
   Future<void> _pickDob() async {
     final now = DateTime.now();
     final current = DateTime.tryParse(_c['date_of_birth']!.text);
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: current ?? DateTime(now.year - 25),
+    final picked = await pickDate(
+      context,
+      initial: current ?? DateTime(now.year - 25),
       firstDate: DateTime(1900),
       lastDate: now,
+      help: 'Date of birth',
     );
     if (picked != null) {
       _c['date_of_birth']!.text =
@@ -456,12 +467,15 @@ class _PersonalInfoState extends State<_PersonalInfo> {
       int? maxLength,
       bool readOnly = false,
       VoidCallback? onTap,
+      List<TextInputFormatter>? formatters,
       Widget? suffix}) {
     return TextFormField(
       key: ValueKey('field-$key'),
       controller: _c[key],
       validator: validator,
       keyboardType: keyboard,
+      inputFormatters: formatters,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       maxLines: maxLines,
       maxLength: maxLength,
       readOnly: readOnly,
@@ -526,7 +540,7 @@ class _PersonalInfoState extends State<_PersonalInfo> {
             const Divider(height: 1),
             const SizedBox(height: 22),
             pair(
-              _field('first_name', 'First Name *', validator: (v) {
+              _field('first_name', 'First Name *', formatters: InputRules.name, validator: (v) {
                 final t = (v ?? '').trim();
                 if (t.isEmpty) return 'First name is required';
                 if (!RegExp(r'^[a-zA-Z]+(\s[a-zA-Z]+)*$').hasMatch(t)) {
@@ -534,7 +548,7 @@ class _PersonalInfoState extends State<_PersonalInfo> {
                 }
                 return null;
               }),
-              _field('last_name', 'Last Name', validator: (v) {
+              _field('last_name', 'Last Name', formatters: InputRules.name, validator: (v) {
                 final t = (v ?? '').trim();
                 return t.isEmpty || RegExp(r'^[a-zA-Z]+(\s[a-zA-Z]+)*$').hasMatch(t)
                     ? null
@@ -577,9 +591,10 @@ class _PersonalInfoState extends State<_PersonalInfo> {
             ),
             gap,
             pair(
-              _field('city', 'City'),
+              _field('city', 'City', formatters: InputRules.name),
               _field('pincode', 'Pincode',
                   keyboard: TextInputType.number,
+                  formatters: [...InputRules.digits, LengthLimitingTextInputFormatter(6)],
                   validator: (v) {
                     final t = (v ?? '').trim();
                     return t.isEmpty || RegExp(r'^\d{6}$').hasMatch(t)
@@ -838,6 +853,7 @@ class _ContactDialogState extends State<ContactDialog> {
                 controller: _value,
                 autofocus: true,
                 keyboardType: _isEmail ? TextInputType.emailAddress : TextInputType.phone,
+                inputFormatters: _isEmail ? null : [...InputRules.digits, LengthLimitingTextInputFormatter(10)],
                 decoration: InputDecoration(
                   labelText: _isEmail ? 'New email address' : 'Phone number',
                   prefixText: _isEmail ? null : '+91 ',
@@ -852,6 +868,7 @@ class _ContactDialogState extends State<ContactDialog> {
                 autofocus: true,
                 keyboardType: TextInputType.number,
                 maxLength: 6,
+                inputFormatters: InputRules.digits,
                 decoration: const InputDecoration(labelText: '6-digit OTP', counterText: ''),
                 onSubmitted: (_) => _verify(),
               ),

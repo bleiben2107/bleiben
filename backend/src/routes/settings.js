@@ -5,6 +5,7 @@ import { config } from "../config.js";
 import { DEFAULT_NOTIFICATION_PREFS, NOTIFICATION_KINDS, orgPrefs } from "../notify.js";
 import { PROVIDERS, checkRazorpayKeys, mask, openSecret, sealSecret, testModeAllowed } from "../payments/gateway.js";
 import { can } from "../roles.js";
+import { payoutDoc, payoutInput, payoutTargets, payoutView } from "../payments/payout.js";
 import { savePhoto } from "../uploads.js";
 
 /**
@@ -169,6 +170,22 @@ export function settingsRouter(db, services = {}) {
   }));
 
   // Owner's payment gateway (money from direct bookings goes to the owner).
+  // Bank account and tax info (Account settings) — where the host gets paid.
+  router.get("/payout", handle(async (req, res) => {
+    const p = await payoutDoc(db, req.scope.org_id);
+    return res.json({ ...payoutView(p), targets: payoutTargets(p), can_edit: can(req.membership?.role, "org.update") });
+  }));
+
+  router.put("/payout", handle(async (req, res) => {
+    need(req, "org.update");
+    const existing = await payoutDoc(db, req.scope.org_id);
+    const set = { ...payoutInput(req.body, existing), org_id: req.scope.org_id, updated_by: req.user.id };
+    if (existing) await db.updateDoc("payout_details", { id: existing.id }, set);
+    else await db.insertDoc("payout_details", { ...set, created_at: set.updated_at });
+    const p = await payoutDoc(db, req.scope.org_id);
+    return res.json({ ...payoutView(p), targets: payoutTargets(p), can_edit: true });
+  }));
+
   router.put("/payment-gateway", handle(async (req, res) => {
     need(req, "billing.manage");
     const b = req.body ?? {};
