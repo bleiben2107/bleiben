@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:bleiben/core/theme/app_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/util/date_range.dart';
 import '../../core/theme/app_theme.dart';
 import 'home_content.dart';
 import 'home_widgets.dart';
@@ -315,9 +316,9 @@ class _DemoDialogState extends State<_DemoDialog> {
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _date ?? now.add(const Duration(days: 1)),
+    final picked = await pickDate(
+      context,
+      initial: _date ?? now.add(const Duration(days: 1)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 60)),
     );

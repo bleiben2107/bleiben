@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../../core/util/input_rules.dart';
 import '../../core/util/date_range.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_fonts.dart';
@@ -154,6 +154,7 @@ class _CreateBookingDialogState extends State<_CreateBookingDialog> {
       help: 'Check-in and check-out',
       startLabel: 'Check-in',
       endLabel: 'Check-out',
+      requireNights: true,
     );
     if (r == null || !r.end.isAfter(r.start)) return;
     setState(() {
@@ -258,8 +259,11 @@ class _CreateBookingDialogState extends State<_CreateBookingDialog> {
                         TextFormField(
                           key: const Key('guest-name'),
                           controller: _name,
+                          inputFormatters: InputRules.name,
+                          textCapitalization: TextCapitalization.words,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           decoration: const InputDecoration(labelText: 'Guest name'),
-                          validator: (v) => (v ?? '').trim().length < 2 ? 'Enter the guest name' : null,
+                          validator: (v) => InputRules.requiredName(v, what: 'the guest name'),
                         ),
                         const SizedBox(height: 12),
                         Row(children: [
@@ -268,9 +272,11 @@ class _CreateBookingDialogState extends State<_CreateBookingDialog> {
                               key: const Key('guest-phone'),
                               controller: _phone,
                               keyboardType: TextInputType.phone,
+                              inputFormatters: InputRules.phone,
+                              autovalidateMode: AutovalidateMode.onUserInteraction,
                               decoration: const InputDecoration(labelText: 'Phone'),
                               validator: (v) =>
-                                  (v ?? '').trim().isEmpty && _email.text.trim().isEmpty ? 'Phone or email needed' : null,
+                                  (v ?? '').trim().isEmpty && _email.text.trim().isEmpty ? 'Phone or email needed' : InputRules.optionalPhone(v),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -278,6 +284,8 @@ class _CreateBookingDialogState extends State<_CreateBookingDialog> {
                             child: TextFormField(
                               controller: _email,
                               keyboardType: TextInputType.emailAddress,
+                              autovalidateMode: AutovalidateMode.onUserInteraction,
+                              validator: InputRules.optionalEmail,
                               decoration: const InputDecoration(labelText: 'Email (optional)'),
                             ),
                           ),
@@ -316,7 +324,7 @@ class _CreateBookingDialogState extends State<_CreateBookingDialog> {
                                 key: const Key('advance'),
                                 controller: _advance,
                                 keyboardType: TextInputType.number,
-                                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                                inputFormatters: InputRules.amount,
                                 decoration: const InputDecoration(labelText: 'Advance received (₹)'),
                               ),
                             ),
@@ -330,11 +338,12 @@ class _CreateBookingDialogState extends State<_CreateBookingDialog> {
                               ),
                             ),
                           ]),
+                        if (!_inquiry) PayoutHint(api: widget.api, method: _method),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _total,
                           keyboardType: TextInputType.number,
-                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                          inputFormatters: InputRules.amount,
                           decoration: InputDecoration(
                               labelText: 'Total override (₹, optional)',
                               helperText: q != null && available ? 'Calculated total: ${money(q['total'] as num)}' : null),
@@ -411,7 +420,7 @@ Future<bool?> showBookingDetail(BuildContext context,
 
 /// Opens [builder] as a full-height panel sliding in from the right
 /// (booking details, like the homyhuts calendar sidebar).
-Future<T?> showSideSheet<T>(BuildContext context, WidgetBuilder builder, {double width = 560}) => showGeneralDialog<T>(
+Future<T?> showSideSheet<T>(BuildContext context, WidgetBuilder builder, {double? width}) => showGeneralDialog<T>(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Close',
@@ -419,10 +428,12 @@ Future<T?> showSideSheet<T>(BuildContext context, WidgetBuilder builder, {double
       transitionDuration: const Duration(milliseconds: 220),
       pageBuilder: (ctx, _, __) {
         final w = MediaQuery.sizeOf(ctx).width;
+        // Half the screen (at least 520 px; full width on phones).
+        final want = width ?? (w / 2 < 520 ? 520.0 : w / 2);
         return Align(
           alignment: Alignment.centerRight,
           child: SizedBox(
-            width: w < width + 40 ? w : width,
+            width: w < want + 40 ? w : want,
             height: double.infinity,
             child: Material(color: Colors.white, elevation: 12, child: SafeArea(child: builder(ctx))),
           ),
@@ -496,7 +507,7 @@ class _BookingDetailState extends State<_BookingDetail> {
     final b = _b!;
     final r = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => _PaymentDialog(refund: refund, suggested: refund ? b.paid : b.balance),
+      builder: (_) => _PaymentDialog(api: widget.api, refund: refund, suggested: refund ? b.paid : b.balance),
     );
     if (r == null) return;
     await _run(() => widget.api.addPayment(widget.id, {...r, if (refund) 'kind': 'refund'}),
@@ -679,8 +690,9 @@ class _Banner extends StatelessWidget {
 }
 
 class _PaymentDialog extends StatefulWidget {
-  const _PaymentDialog({required this.refund, required this.suggested});
+  const _PaymentDialog({required this.api, required this.refund, required this.suggested});
 
+  final BookingsApi api;
   final bool refund;
   final double suggested;
 
@@ -710,7 +722,7 @@ class _PaymentDialogState extends State<_PaymentDialog> {
               key: const Key('payment-amount'),
               controller: _amount,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+              inputFormatters: InputRules.amount,
               decoration: const InputDecoration(labelText: 'Amount (₹)'),
             ),
             const SizedBox(height: 12),
@@ -720,6 +732,7 @@ class _PaymentDialogState extends State<_PaymentDialog> {
               items: [for (final e in paymentMethods.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
               onChanged: (v) => setState(() => _method = v ?? 'cash'),
             ),
+            if (!widget.refund) PayoutHint(api: widget.api, method: _method),
             const SizedBox(height: 12),
             TextField(controller: _ref, decoration: const InputDecoration(labelText: 'Reference (UPI / txn id, optional)')),
           ]),
@@ -784,6 +797,7 @@ class _EditDialogState extends State<_EditDialog> {
                     help: 'Check-in and check-out',
                     startLabel: 'Check-in',
                     endLabel: 'Check-out',
+                    requireNights: true,
                   );
                   if (r != null && r.end.isAfter(r.start)) {
                     setState(() {
@@ -848,4 +862,56 @@ class _EditDialogState extends State<_EditDialog> {
           ),
         ],
       );
+}
+
+
+/// "Received in …" under a UPI / bank-transfer payment method, from
+/// Account settings → Bank Account and Tax Info.
+class PayoutHint extends StatefulWidget {
+  const PayoutHint({super.key, required this.api, required this.method});
+
+  final BookingsApi api;
+  final String method;
+
+  @override
+  State<PayoutHint> createState() => _PayoutHintState();
+}
+
+class _PayoutHintState extends State<PayoutHint> {
+  Map<String, dynamic>? _targets;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.api.api.get('/api/settings/payout').then((r) {
+      if (mounted) setState(() => (_targets = ((r as Map)['targets'] as Map?)?.cast<String, dynamic>(), _loaded = true));
+    }).catchError((Object _) {
+      if (mounted) setState(() => _loaded = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded || !(widget.method == 'upi' || widget.method == 'bank_transfer')) return const SizedBox.shrink();
+    final upi = widget.method == 'upi';
+    final t = _targets ?? const <String, dynamic>{};
+    final target = t[upi ? 'upi' : 'bank'] as String?;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(children: [
+        Icon(target == null ? Icons.info_outline : Icons.account_balance_outlined, size: 16, color: target == null ? AppTheme.warningInk : AppTheme.forest),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            target == null
+                ? 'Add your ${upi ? 'UPI ID' : 'bank account'} in Account settings → Bank Account and Tax Info.'
+                : 'Received in: ${upi ? 'UPI $target' : target}',
+            key: const Key('payout-hint'),
+            style: AppFonts.sans(fontSize: 12.5, color: target == null ? AppTheme.warningInk : AppTheme.forest),
+          ),
+        ),
+      ]),
+    );
+  }
 }

@@ -1,7 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../core/util/date_range.dart';
+import '../../core/util/input_rules.dart';
 import '../../core/config/api_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_fonts.dart';
@@ -47,6 +51,9 @@ class _PublicBookingScreenState extends State<PublicBookingScreen> {
 
   Map<String, dynamic>? _booking;
   Map<String, dynamic>? _payment;
+
+  /// Host's UPI / bank details for paying directly (booking requests only).
+  Map<String, dynamic>? _payDirect;
   String? _token;
   String? _payMessage;
   Timer? _tick;
@@ -80,12 +87,15 @@ class _PublicBookingScreenState extends State<PublicBookingScreen> {
 
   Future<void> _pickDates() async {
     final now = DateTime.now();
-    final r = await showDateRangePicker(
-      context: context,
+    final r = await pickDateRange(
+      context,
       firstDate: DateTime(now.year, now.month, now.day),
       lastDate: now.add(const Duration(days: 540)),
-      initialDateRange: _dates,
-      helpText: 'Check-in and check-out',
+      initial: _dates,
+      help: 'Check-in and check-out',
+      startLabel: 'Check-in',
+      endLabel: 'Check-out',
+      requireNights: true,
     );
     if (r == null || !r.end.isAfter(r.start)) return;
     setState(() => _dates = r);
@@ -133,6 +143,7 @@ class _PublicBookingScreenState extends State<PublicBookingScreen> {
         _booking = (r['booking'] as Map).cast();
         _token = r['token'] as String;
         _payment = (r['payment'] as Map?)?.cast();
+        _payDirect = (r['pay_direct'] as Map?)?.cast();
         _step = _payment == null ? _Step.done : _Step.pay;
       });
       if (_payment != null) _startTimer();
@@ -463,24 +474,31 @@ class _PublicBookingScreenState extends State<PublicBookingScreen> {
         TextFormField(
           key: const Key('guest-name'),
           controller: _name,
-          decoration: const InputDecoration(labelText: 'Full name'),
-          validator: (v) => (v ?? '').trim().length < 2 ? 'Enter your full name' : null,
+          inputFormatters: InputRules.name,
+          textCapitalization: TextCapitalization.words,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          decoration: const InputDecoration(labelText: 'Full name', hintText: 'Letters only'),
+          validator: InputRules.requiredName,
         ),
         const SizedBox(height: 10),
         TextFormField(
           key: const Key('guest-phone'),
           controller: _phone,
           keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(labelText: 'Phone (WhatsApp)'),
-          validator: (v) => RegExp(r'^\+?[0-9 ()-]{7,20}$').hasMatch((v ?? '').trim()) ? null : 'Enter a valid phone number',
+          inputFormatters: InputRules.phone,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          decoration: const InputDecoration(labelText: 'Phone (WhatsApp)', hintText: '+91 98765 43210'),
+          validator: InputRules.requiredPhone,
         ),
         const SizedBox(height: 10),
         TextFormField(
           key: const Key('guest-email'),
           controller: _email,
           keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(labelText: 'Email (for your confirmation)'),
-          validator: (v) => (v ?? '').trim().isEmpty || RegExp(r'^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$').hasMatch(v!.trim()) ? null : 'Enter a valid email',
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
+          decoration: const InputDecoration(labelText: 'Email (for your confirmation)', hintText: 'name@example.com'),
+          validator: InputRules.optionalEmail,
         ),
         const SizedBox(height: 10),
         TextField(controller: _notes, maxLines: 2, decoration: const InputDecoration(labelText: 'Message to the host (optional)')),
@@ -569,10 +587,75 @@ class _PublicBookingScreenState extends State<PublicBookingScreen> {
       _line('Room', '${b['room']}'),
       _line('Guests', '${b['adults']} adult(s)${(b['children'] as num) > 0 ? ', ${b['children']} child(ren)' : ''}'),
       _line('Total', money(b['total'] as num)),
+      if (b['status'] == 'inquiry' && _payDirect != null) _payDirectCard(_payDirect!),
       if (confirmed) ...[
         _line('Paid', money(b['paid'] as num)),
         if ((b['balance'] as num) > 0) _line('Balance at the property', money(b['balance'] as num), bold: true),
       ],
     ]);
+  }
+
+  /// Pay the host directly: UPI QR + ID and bank transfer details.
+  Widget _payDirectCard(Map<String, dynamic> p) {
+    final upi = p['upi_id'] as String?;
+    final amount = (p['amount'] as num?) ?? 0;
+    final bank = (p['bank'] as Map?)?.cast<String, dynamic>();
+    final upiLink = upi == null
+        ? null
+        : Uri(scheme: 'upi', host: 'pay', queryParameters: {
+            'pa': upi,
+            'pn': '${p['payee'] ?? ''}',
+            'am': amount.toStringAsFixed(2),
+            'cu': 'INR',
+            'tn': 'Booking ${p['reference'] ?? ''}',
+          }).toString();
+    Widget copyRow(String label, String value) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(children: [
+            SizedBox(width: 120, child: Text(label, style: AppFonts.sans(color: AppTheme.muted, fontSize: 13))),
+            Expanded(child: SelectableText(value, style: AppFonts.sans(fontWeight: FontWeight.w600, fontSize: 13.5))),
+            IconButton(
+              tooltip: 'Copy $label',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.copy_rounded, size: 16),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: value));
+                _snack('$label copied');
+              },
+            ),
+          ]),
+        );
+    return Container(
+      key: const Key('pay-direct'),
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: AppTheme.successSoft, borderRadius: BorderRadius.circular(12)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('Pay the host directly', style: AppFonts.sans(fontSize: 16, fontWeight: FontWeight.w700)),
+        Text('Pay ${money(amount)} to confirm faster. Mention ${p['reference']} in the payment note.',
+            style: AppFonts.sans(fontSize: 13, color: AppTheme.muted)),
+        const SizedBox(height: 10),
+        if (upiLink != null) ...[
+          Center(
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.white,
+              child: QrImageView(key: const Key('upi-qr'), data: upiLink, size: 150, backgroundColor: Colors.white),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Center(child: Text('Scan with any UPI app', style: AppFonts.sans(fontSize: 12, color: AppTheme.muted))),
+          copyRow('UPI ID', upi!),
+        ],
+        if (bank != null) ...[
+          const Divider(height: 18),
+          Text('Bank transfer', style: AppFonts.sans(fontWeight: FontWeight.w700)),
+          copyRow('Account name', '${bank['beneficiary_name']}'),
+          copyRow('Account number', '${bank['account_number']}'),
+          copyRow('IFSC', '${bank['ifsc']}'),
+          copyRow('Bank', '${bank['bank_name']} · ${bank['account_type']}'),
+        ],
+      ]),
+    );
   }
 }

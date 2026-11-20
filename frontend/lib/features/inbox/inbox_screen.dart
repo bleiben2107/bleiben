@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/util/date_range.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_fonts.dart';
 import '../../core/theme/app_theme.dart';
@@ -381,7 +382,7 @@ class _ThreadState extends State<_Thread> {
   Future<DateTime?> _pickWhen([DateTime? initial]) async {
     final now = DateTime.now();
     final start = initial ?? now.add(const Duration(hours: 1));
-    final d = await showDatePicker(context: context, initialDate: start, firstDate: now, lastDate: now.add(const Duration(days: 365)), helpText: 'Send on (IST)');
+    final d = await pickDate(context, initial: start, firstDate: now, lastDate: now.add(const Duration(days: 365)), help: 'Send on (IST)');
     if (d == null || !mounted) return null;
     final t = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(start), helpText: 'Send at (IST)');
     if (t == null) return null;
